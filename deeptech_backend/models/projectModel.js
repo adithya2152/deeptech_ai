@@ -1,0 +1,79 @@
+import pool from '../config/db.js';
+
+const Project = {
+  getProjectsByClient: async (clientId, status = null) => {
+    let sql = `SELECT * FROM projects WHERE buyer_id = $1`;
+    const params = [clientId];
+
+    if (status) {
+      sql += ` AND status = $2`;
+      params.push(status);
+    }
+
+    sql += ` ORDER BY created_at DESC`;
+
+    const { rows } = await pool.query(sql, params);
+    return rows;
+  },
+
+  getById: async (id) => {
+    const sql = `
+      SELECT 
+        p.*, 
+        json_build_object('id', u.id, 'name', u.first_name || ' ' || u.last_name, 'email', u.email) as client
+      FROM projects p
+      JOIN profiles u ON p.buyer_id = u.id
+      WHERE p.id = $1
+    `;
+    const { rows } = await pool.query(sql, [id]);
+    return rows[0];
+  },
+
+  create: async (data) => {
+    const { 
+      buyer_id, title, description, domain, trl_level, 
+      expected_outcome, risk_categories, budget_min, budget_max, deadline 
+    } = data;
+
+    const sql = `
+      INSERT INTO projects (
+        buyer_id, title, description, domain, trl_level, 
+        expected_outcome, risk_categories, budget_min, budget_max, deadline
+      )
+      VALUES (
+        $1, $2, $3, $4, $5, $6, $7::text[], $8, $9, $10
+      )
+      RETURNING *;
+    `;
+    
+    const params = [
+      buyer_id, title, description, domain, trl_level, 
+      expected_outcome, risk_categories || [], budget_min, budget_max, deadline
+    ];
+
+    const { rows } = await pool.query(sql, params);
+    return rows[0];
+  },
+
+  update: async (id, updates) => {
+    const sql = `
+      UPDATE projects 
+      SET title = COALESCE($2, title),
+          description = COALESCE($3, description),
+          status = COALESCE($4, status),
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING *;
+    `;
+    const { rows } = await pool.query(sql, [id, updates.title, updates.description, updates.status]);
+    return rows[0];
+  },
+
+  delete: async (id) => {
+    const sql = `DELETE FROM projects WHERE id = $1 RETURNING id`;
+    const { rows } = await pool.query(sql, [id]);
+    return rows[0];
+  }
+};
+
+export default Project;
