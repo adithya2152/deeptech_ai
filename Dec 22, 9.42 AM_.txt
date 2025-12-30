@@ -1,0 +1,82 @@
+(Transcribed by TurboScribe.ai. Go Unlimited to remove this message.)
+
+[Speaker 1]
+Then we will be providing them with a numberless or email-less chat option. That chat option itself will give them updates on their mobile as well as their, that is through WhatsApp, as well as their email saying that, you know, there is this person who was sent in first message, second message, third message with time and date stamp. So, that becomes their negotiation and if they click on that link, they will again be redirected to the website and website will log every chat and every discussion or negotiation part of it on the website itself.
+
+Is that okay, Yasuchandra?
+
+[Speaker 3]
+Yeah, okay. I mean, like there will be a chat discussion and then, so once there will be an offer, someone wants to interact with that guy. So, two, three guys, let's say, will go ahead and then interact with the buyer for discussions and then, whomever he selects or the buyer agrees, so he will send it to that individual for the further closing of that chat.
+
+[Speaker 2]
+Okay, so in this case, we have to keep two options. One, the user, the buyer itself is searching for an expert or he is going either through, he is selecting an expert through a recommendation or through the search page. Either this or he is new to the platform, he doesn't know which expert to go for.
+
+So, we have to either keep a system where he just puts a project in an auction and a person just who is interested can hop into the project. So, these are the two options.
+
+[Speaker 3]
+So, you can also introduce the negotiation stage itself. So, a project, let's say, the buyer comes and puts it in the platform and then he will set the stage as the negotiation stage. So, during the negotiation stage, the buyer itself can go and approach a guy or the developers itself can go and approach the buyer.
+
+So, once either through any of these things, the chat conversations will be continued to happen and once the buyer is satisfied, he will change that to a contract, that's it. So, he will remove that stage of negotiation stage and then he will come to the contract stage, that's it. Sure, sir.
+
+That's also fine.
+
+[Speaker 4]
+And also, sir, like over here, we can also take over their profiles regarding their hourly rates, their availability and etc.
+
+[Speaker 1]
+Okay. So, this is like a listing, more of a listing of expert experience and their expertise.
+
+[Speaker 4]
+Yes, sir.
+
+[Speaker 1]
+This is where the manual suggestions will go, sir. Yes, they are going to create their profile on the site is what you are saying, right? Yes, sir.
+
+And we should also give it a link for their LinkedIn profile or their research kit so that their scholarly documents or their LinkedIn profile or the public profile or the professional profile, all of that will actually reflect over here.
+
+[Speaker 2]
+That's also possible. We will do that. One more thing, I had one second, sir.
+
+[Speaker 4]
+And then we have these, this is the settings page. It just has the UI and it's not functional yet. And apart from that, we also have messages.
+
+[Speaker 1]
+Just one more quick suggestion over here, Dil. So, either we can allow the requirements on the buyer to actually search for this person over here or the expert to actually search for all the requirements in that particular arena. So, either we can give options for both.
+
+[Speaker 2]
+Yes, sir. That's why I told, instead of searching for requirements, what he can do is if he knows some expert or he might already be in work with some expert, he can search for experts or he can believe our recommendations and go with them. Or he doesn't know anyone, he put his project details into a platform or into an area where people will come and bid their price.
+
+[Speaker 1]
+So, what my suggestion is, you should be able to, this thing, the platform should be able to give an automatic suggestion to the entire thing, like, you know, to the expert, as soon as he gives his expertise and he enters into the platform itself, the platform should be intelligent enough to create recommendations for the linking of the expert with the requirements and the requirements with the expert. That is, that is our intelligence that what we are, the platform is going to provide.
+
+[Speaker 2]
+So, we may also require the AI integration for our apps? Oh, surely, it has to be there, because, see, without AI, we are not going to have anything for the future, right? Right now, we were only focused on the rule-based stuff, right?
+
+We didn't know AI. Correct. See, AI is nothing but, again, a rule-based...
+
+[Speaker 1]
+Yes, but what you told is not enough with rule-based, that's what I'm telling. So, it needs a little more intelligence than just this thing. So, anywhere in the world, if there is somebody who is an expert on, for example, this thing, Cobol or Fortran, these are very basic, old languages, right?
+
+If somebody is looking for something like that, and if they type something on to that particular thing, and in any other corner of the world, if somebody is there with that particular expertise, who was registered on our site, or not even registered, who's got a LinkedIn profile, we should send, the system should send out an invite for that person, that this is a requirement from our, one of the requirements from the site, so please log into our site and answer this question, since it is matching your requirement. So, that kind of a LinkedIn also we should be able to do. That will provide us an extra added edge over other people.
+
+Sure, sir, we can do that. So, again, similar thing to the buyer also. If they're typing somewhere something related to any requirement, on any other sites also, if we are able to pull in some kind of this thing, do some kind of web scraping, you can tell that, okay, here we have an expert who's, you know, who's able to address your particular requirement, please do log into our thing and we'll be able to service your requirement, kind of a thing, that automatic SMS or email has to go, or sorry, WhatsApp or email has to go, that is our USP. Fine, sir, we can do that.
+
+Okay, that'll be great. If we're able to do that, nothing like it.
+
+[Speaker 2]
+Sure, sir, that we'll just discuss like, I think in our team only Nachiket is, Nachiket and I think Aaravosh is like, lightly with AI touch. If anyone else also is like, our team will become short with development part.
+
+[Speaker 1]
+Okay, it will only be like, based on the requirement given by the buyer, or the requirements shared by the person who's going to be paying for that.
+
+[Speaker 2]
+So, all these features are based on requirements, or is it like, it is an automated response? Sorry, can you say that again, Aditya? So, the NDA generation, is it like, the buyer will upload his own document, or is it like an app system will generate an NDA?
+
+Good question.
+
+[Speaker 1]
+So, we can have two options, man. One is a standard NDA, where they can go through the standard NDA options for IP related discussions. And two, we can also give them an option for uploading their own NDA, or make any alterations to our standard NDA, to incorporate all those features, right?
+
+Fine, sir. Got it.
+
+(Transcribed by TurboScribe.ai. Go Unlimited to remove this message.)

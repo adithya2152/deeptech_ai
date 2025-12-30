@@ -1,0 +1,23 @@
+# Semantic Search Microservice Requirements
+# Core dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+
+# AI/ML dependencies
+sentence-transformers>=2.3.0
+transformers>=4.21.0
+torch==2.2.0
+numpy<2
+
+# Database dependencies (for PostgreSQL with pgvector)
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+
+# Environment and utilities
+python-dotenv==1.0.0
+requests==2.31.0
+
+# Development dependencies
+pytest==7.4.3
+httpx==0.25.2

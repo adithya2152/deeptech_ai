@@ -1,0 +1,147 @@
+(Transcribed by TurboScribe.ai. Go Unlimited to remove this message.)
+
+[Speaker 1]
+What I was telling is, if you can handle that NLP part, until you complete that, VI and Aarush will take care for the development process. So can you plan the structure, the NLP structure, whatever I told.
+
+[Speaker 2]
+Yeah, so basically you don't want a pre-trained model on that also. It's not required, I guess.
+
+[Speaker 1]
+I don't know what I'm telling is correct or wrong, but I believe there's a process like this.
+
+[Speaker 2]
+Okay.
+
+[Speaker 1]
+Using just NLP, we can do it.
+
+[Speaker 2]
+But even if you use NLP, what I'm trying to say is that, suppose you have tokenized it, you need to give that tokenized encoding to a model. So based on that...
+
+[Speaker 1]
+No, yeah, that's what I'm telling. Instead of the model trying to analyze, we will just do a search. For example, it is time-consuming, I know, because we need a rule-based approach itself.
+
+So what we'll do, whatever we are tokenizing it, we will compare that tokenizing in another database.
+
+[Speaker 2]
+Okay.
+
+[Speaker 1]
+Whichever tokenization is matching, whichever user has matched the tokenization, let it be time-consuming, because this is just a recommendation process, right?
+
+[Speaker 2]
+Yeah, but suppose if we proceed with your approach, then later Sir has told that we need to also use LinkedIn stuff.
+
+[Speaker 1]
+LinkedIn is all web scraping. LinkedIn will not come in the NLP part. What Sir told us, for example, we might have web scraped something from LinkedIn and we have to put it in our thing.
+
+So what Sir is telling, we should get a message through mail or something that, okay, someone has created a project, you have the right expertise for that project, please join. That's what Sir meant, right?
+
+[Speaker 2]
+Yeah, but even if they haven't registered to our site, we need to show them.
+
+[Speaker 1]
+Even if they are?
+
+[Speaker 2]
+Even if they have not registered to our site, we have to go through LinkedIn and show it to them?
+
+[Speaker 1]
+No, no, no, not that. This feature is only for people who have not joined our website. You will be recommending users only from our website.
+
+[Speaker 2]
+I think Sir said that it's kind of a bonus feature.
+
+[Speaker 1]
+If Sir tells also, I will talk to him because this is not suitable for this website. Because our goal is not to take people out of our website. So you just make a note of this.
+
+I'll just speak to Sir about it again. I'll come back to you. So basically, whoever is registered to our website, you have to recommend them.
+
+For now, you do that. If Sir tells you later, then we will see that feature. For now, you work on the things who are registered for our website.
+
+Because that is web scraping. You have to web scrape whatever project requirements you are doing. You will be web scraping over the net and you have to do that lot of work.
+
+If that is required, then we think of autodidact because even I don't have it, then we think of it. I don't think that it is feasible also for our problem statement. For now, you work on this.
+
+I'll speak to Santosh Sir and I'll let you know.
+
+[Speaker 2]
+So in short, what we are trying to say is that for now, we don't need to use any model. We just have to tokenize whatever they have, the query. And then based on that, we need to search on the database using the rule-based system.
+
+[Speaker 1]
+This is the model. I am not telling the exact. This approach, we use NLP and without using models, you can do the recommendation system.
+
+If you need, if you have an idea of an AI, you can use it. But you just research on this and then plan accordingly. Then I will discuss whatever you want to do.
+
+This is your expertise. You are the mind master for it. I am just telling what I have seen.
+
+That's all.
+
+[Speaker 2]
+What we used to do in our college was we used to use a pre-trained model like BERT or something.
+
+[Speaker 1]
+Yeah, that time I got it. But we don't have a dataset for training. We don't have anything.
+
+And if Sir tells that we have to include LinkedIn, we have to include all that, then we might have to go for AI itself. But if it's only a database, I think I had done it on HackerKhan. So that's why I remember that process.
+
+So I think you can move forward with this approach. You explore this approach, then we will discuss on it. And one more last thing.
+
+Whatever we discussed in today's meet, apart from AI, just drop everything in the group. And Aarush, the remaining backend was for EPIC 5, right? Yeah.
+
+Just complete it, EPIC 5. AI is created for our contracting. Sorry, UI, UI.
+
+[Speaker 2]
+UI, no, no.
+
+[Speaker 1]
+The second part is not there. I want to call my Aarush. Fine, Aarush.
+
+I think the expert part, there is no UI also. UI flow is not there for the expert part. Only the BIAS part is complete.
+
+Is this correct? Yeah. So these two things is your work today.
+
+Explore what you can additionally add in AI experts according to the backlogs. And complete the backend for EPIC 5. By that time, today, I will tell you my timeline so that you people might not get confused.
+
+I will be working from after 6 or 7 in the evening till the project is completed. Till my task for the day is completed. Just for all experts to be on the same page.
+
+I am working on project. I am working on some other commitments also. So I am giving my time.
+
+For me, it's morning. And my task working will be there from 6 to until the task is completed at night. So maybe you guys are working full time.
+
+So that's why I am assigning tasks for this. So if you need any help, please drop a message. I will help you or I will take care of it.
+
+So let us be open with each other. Is it fine?
+
+[Speaker 2]
+Yeah, sure.
+
+[Speaker 1]
+Do you guys have any queries?
+
+[Speaker 2]
+No, no. And also I have talked to sir. Tomorrow, I would be travelling.
+
+I would be there in the night's call. But in the day, I won't be there.
+
+[Speaker 1]
+Today, we will not be having a call. Today, you are available, no?
+
+[Speaker 2]
+Yeah, today I am available.
+
+[Speaker 1]
+Okay, today first you just tell me the approach. Then you will be coming back on 24th, right?
+
+[Speaker 2]
+Yeah.
+
+[Speaker 1]
+Fine, we will meet that time again. So Harsh, complete this task for today. If you have any doubts, you can message.
+
+Fine guys, thank you.
+
+[Speaker 2]
+Thank you.
+
+(Transcribed by TurboScribe.ai. Go Unlimited to remove this message.)
