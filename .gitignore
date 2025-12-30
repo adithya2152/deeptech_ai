@@ -1,2 +1,6 @@
 deeptech_backend/.git/
 deeptech_frontend/.git/
+.env
+*.env
+.env.local
+.env.*.local
