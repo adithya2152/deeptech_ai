@@ -8,30 +8,50 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { domainLabels } from '@/lib/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { useExpert } from '@/hooks/useExperts';
+import { useMutation } from '@tanstack/react-query';
+import { messagesApi } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 import {
   Star,
-  Clock,
   MapPin,
   Shield,
-  CheckCircle,
   Calendar,
   FileText,
   Award,
   MessageSquare,
   ArrowLeft,
+  Loader2,
+  ExternalLink,
+  Briefcase,
+  Search
 } from 'lucide-react';
 
 export default function ExpertProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { toast } = useToast();
+  const { isAuthenticated, user, token } = useAuth();
+  
   const { data: expert, isLoading } = useExpert(id!);
+
+  const startConversationMutation = useMutation({
+    mutationFn: (participant_id: string) => 
+      messagesApi.startConversation(participant_id, token!),
+    onSuccess: (response) => {
+      const conversation_id = response.data.conversation.id;
+      navigate(`/messages?id=${conversation_id}`);
+      toast({ title: 'Success', description: 'Conversation started.' });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to start chat.', variant: 'destructive' });
+    }
+  });
 
   if (isLoading) {
     return (
       <Layout>
-        <div className="mx-auto max-w-7xl px-4 py-16 text-center">
-          <p>Loading expert profile...</p>
+        <div className="flex h-[80vh] items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
       </Layout>
     );
@@ -41,36 +61,21 @@ export default function ExpertProfilePage() {
     return (
       <Layout>
         <div className="mx-auto max-w-7xl px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold">Expert not found</h1>
-          <Button onClick={() => navigate('/experts')} className="mt-4">
-            Browse Experts
+          <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h1 className="text-2xl font-bold">Expert Profile Not Found</h1>
+          <Button onClick={() => navigate('/experts')} className="mt-6">
+            Back to Discovery
           </Button>
         </div>
       </Layout>
     );
   }
 
-  const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
-
-  const getVettingBadge = () => {
-    if (expert.vettingLevel === 'deep_tech_verified') {
-      return (
-        <Badge className="bg-primary text-primary-foreground gap-1">
-          <Shield className="h-3 w-3" />
-          Deep-Tech Verified
-        </Badge>
-      );
-    }
-    if (expert.vettingLevel === 'advanced') {
-      return (
-        <Badge variant="secondary" className="gap-1">
-          <CheckCircle className="h-3 w-3" />
-          Advanced Verified
-        </Badge>
-      );
-    }
-    return <Badge variant="outline">Pending Verification</Badge>;
+  const getInitials = (first_name: string, last_name: string) => {
+    return `${first_name?.[0] || ''}${last_name?.[0] || ''}`.toUpperCase();
   };
+
+  const isOwnProfile = user?.id === expert.id;
 
   return (
     <Layout>
@@ -81,209 +86,182 @@ export default function ExpertProfilePage() {
         </Button>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Header */}
+            {/* Main Profile Card */}
             <Card>
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row gap-6">
-                  <Avatar className="h-24 w-24 ring-4 ring-border">
+                  <Avatar className="h-24 w-24 ring-2 ring-border">
                     <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                      {getInitials(expert.name)}
+                      {getInitials(expert.first_name, expert.last_name)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <h1 className="font-display text-2xl font-bold">{expert.name}</h1>
-                      {getVettingBadge()}
+                      <h1 className="font-display text-2xl font-bold">
+                        {expert.first_name} {expert.last_name}
+                      </h1>
+                      {expert.vetting_level === 'deep_tech_verified' && (
+                        <Badge className="bg-primary text-primary-foreground gap-1">
+                          <Shield className="h-3 w-3" />
+                          Deep-Tech Verified
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground mb-3">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-3 text-sm">
                       <MapPin className="h-4 w-4" />
-                      {expert.location}
+                      {expert.location || 'Remote'}
                     </div>
-                    <p className="text-muted-foreground">{expert.bio}</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      {expert.bio || 'No bio provided.'}
+                    </p>
                     <div className="flex flex-wrap gap-2 mt-4">
-                      {expert.domains.map(domain => (
+                      {expert.domains?.map((domain: string) => (
                         <Badge key={domain} variant="outline">
-                          {domain.startsWith('custom:') 
-                            ? domain.substring(7) 
-                            : domainLabels[domain] || domain}
+                          {domain.startsWith('custom:') ? domain.substring(7) : domainLabels[domain] || domain}
                         </Badge>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-border">
+                <div className="grid grid-cols-3 gap-4 mt-8 pt-6 border-t">
                   <div className="text-center">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <Star className="h-5 w-5 fill-warning text-warning" />
-                      <span className="text-2xl font-bold">{expert.rating}</span>
+                    <div className="flex items-center justify-center gap-1">
+                      <Star className="h-4 w-4 fill-warning text-warning" />
+                      <span className="font-bold text-lg">{expert.rating || '0.0'}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{expert.reviewCount} reviews</p>
+                    <p className="text-xs text-muted-foreground">{expert.review_count || 0} reviews</p>
+                  </div>
+                  <div className="text-center border-x">
+                    <p className="font-bold text-lg">{expert.total_hours || 0}</p>
+                    <p className="text-xs text-muted-foreground">Hours Logged</p>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold">{expert.totalHours}</div>
-                    <p className="text-sm text-muted-foreground">Hours completed</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">${expert.hourlyRates?.advisory}</div>
-                    <p className="text-sm text-muted-foreground">Starting rate/hr</p>
+                    <p className="font-bold text-lg">${expert.hourly_rate_advisory || 0}</p>
+                    <p className="text-xs text-muted-foreground">Advisory Rate</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Tabs */}
+            {/* Information Tabs */}
             <Tabs defaultValue="about">
-              <TabsList>
+              <TabsList className="bg-muted/50">
                 <TabsTrigger value="about">About</TabsTrigger>
-                <TabsTrigger value="experience">Experience</TabsTrigger>
-                <TabsTrigger value="reviews">Reviews</TabsTrigger>
+                <TabsTrigger value="publications">Publications</TabsTrigger>
               </TabsList>
 
               <TabsContent value="about" className="mt-6 space-y-6">
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Experience Summary</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle className="text-lg">Experience Summary</CardTitle></CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground">{expert.experience_summary}</p>
-                  </CardContent>
-                </Card>
-
-                {expert.patents && expert.patents.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Award className="h-5 w-5" />
-                        Patents
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {expert.patents.map((patent, i) => (
-                          <li key={i} className="text-sm text-muted-foreground">
-                            {patent}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {expert.papers && expert.papers.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        Publications
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {expert.papers.map((paper, i) => (
-                          <li key={i} className="text-sm text-muted-foreground">
-                            {paper}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-
-              <TabsContent value="experience" className="mt-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-muted-foreground">
-                      Detailed work history and project portfolio coming soon.
+                    <p className="text-muted-foreground whitespace-pre-wrap">
+                      {expert.experience_summary || 'No detailed summary provided.'}
                     </p>
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              <TabsContent value="reviews" className="mt-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-muted-foreground">
-                      Client reviews and testimonials coming soon.
-                    </p>
-                  </CardContent>
-                </Card>
+              <TabsContent value="publications" className="mt-6 space-y-4">
+                {expert.patents?.length > 0 && (
+                  <Card>
+                    <CardHeader><CardTitle className="text-base flex items-center gap-2"><Award className="h-4 w-4" /> Patents</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {expert.patents.map((patent: string, i: number) => (
+                        <div key={i} className="text-sm p-2 border rounded flex justify-between">
+                          <span>{patent}</span>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+                {expert.papers?.length > 0 && (
+                  <Card>
+                    <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Research Papers</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {expert.papers.map((paper: string, i: number) => (
+                        <div key={i} className="text-sm p-2 border rounded flex justify-between">
+                          <span>{paper}</span>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+                {!expert.patents?.length && !expert.papers?.length && (
+                  <div className="p-8 text-center text-muted-foreground italic border rounded-lg">
+                    No publications listed.
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Rates Card */}
+            {/* Rates Sidebar */}
             <Card>
-              <CardHeader>
-                <CardTitle>Hourly Rates</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Service Rates</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                  <div>
-                    <p className="font-medium">Advisory</p>
-                    <p className="text-sm text-muted-foreground">Strategic guidance</p>
-                  </div>
-                  <p className="text-xl font-bold">${expert.hourly_rate_advisory}/hr</p>
+                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                  <span className="text-sm font-medium">Advisory</span>
+                  <span className="font-bold">${expert.hourly_rate_advisory}/hr</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                  <div>
-                    <p className="font-medium">Architecture Review</p>
-                    <p className="text-sm text-muted-foreground">Technical deep-dives</p>
-                  </div>
-                  <p className="text-xl font-bold">${expert.hourly_rate_architecture}/hr</p>
+                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                  <span className="text-sm font-medium">Architecture</span>
+                  <span className="font-bold">${expert.hourly_rate_architecture}/hr</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                  <div>
-                    <p className="font-medium">Hands-on Execution</p>
-                    <p className="text-sm text-muted-foreground">Active development</p>
-                  </div>
-                  <p className="text-xl font-bold">${expert.hourly_rate_execution}/hr</p>
+                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                  <span className="text-sm font-medium">Execution</span>
+                  <span className="font-bold">${expert.hourly_rate_execution}/hr</span>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Availability Card */}
+            {/* Availability Sidebar */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Availability
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => {
-                    const slot = expert.availability.find(a => a.day_of_week === i);
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4" /> Weekly Availability</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {expert.availability?.length > 0 ? (
+                  ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => {
+                    const slot = expert.availability.find((a: any) => a.day_of_week === i);
                     return (
-                      <div key={day} className="flex justify-between text-sm">
+                      <div key={day} className="flex justify-between text-xs">
                         <span className={slot ? 'font-medium' : 'text-muted-foreground'}>{day}</span>
-                        <span className={slot ? '' : 'text-muted-foreground'}>
-                          {slot ? `${slot.start_time} - ${slot.end_time}` : 'Unavailable'}
-                        </span>
+                        <span>{slot ? `${slot.start_time} - ${slot.end_time}` : 'Unavailable'}</span>
                       </div>
                     );
-                  })}
-                </div>
+                  })
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">No availability set.</p>
+                )}
               </CardContent>
             </Card>
 
-            {/* Action Buttons */}
+            {/* Actions */}
             <div className="space-y-3">
-              {isAuthenticated && user?.role === 'buyer' ? (
-                <>
-                  <Button className="w-full" onClick={() => navigate(`/projects/new?expert=${expert.id}`)}>
-                    Hire {expert.name.split(' ')[0]}
+              {isAuthenticated ? (
+                isOwnProfile ? (
+                  <Button variant="outline" className="w-full" onClick={() => navigate('/profile')}>
+                    Edit My Profile
                   </Button>
-                  <Button variant="outline" className="w-full">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Send Message
-                  </Button>
-                </>
+                ) : user?.role === 'buyer' ? (
+                  <>
+                    <Button className="w-full" onClick={() => navigate(`/projects/new?expert=${expert.id}`)}>
+                      Hire {expert.first_name}
+                    </Button>
+                    <Button 
+                      variant="secondary" 
+                      className="w-full"
+                      disabled={startConversationMutation.isPending}
+                      onClick={() => startConversationMutation.mutate(expert.id)}
+                    >
+                      {startConversationMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4 mr-2" />}
+                      Message
+                    </Button>
+                  </>
+                ) : null
               ) : (
                 <Button className="w-full" onClick={() => navigate('/login')}>
                   Log in to Hire

@@ -19,7 +19,8 @@ import {
   Search,
   LayoutDashboard,
   FileText,
-  MessageSquare
+  MessageSquare,
+  Globe 
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -33,9 +34,21 @@ export function Navbar() {
     navigate('/');
   };
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const getInitials = (first_name: string | null, last_name: string | null) => {
+    const f = first_name ? first_name[0] : '';
+    const l = last_name ? last_name[0] : '';
+    return (f + l).toUpperCase() || 'U';
   };
+
+  // Use user auth data
+  const current_user = user;
+  const first_name = current_user?.first_name || '';
+  const last_name = current_user?.last_name || '';
+  const user_role = current_user?.role;
+
+  const isBuyer = user_role === 'buyer';
+  const isExpert = user_role === 'expert';
+  const isAdmin = user_role === 'admin';
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
@@ -53,24 +66,43 @@ export function Navbar() {
           <div className="hidden md:flex md:items-center md:gap-6">
             {isAuthenticated ? (
               <>
-                <Link to="/experts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                  Find Experts
-                </Link>
-                <Link to="/projects" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                  Projects
-                </Link>
-                {user?.role === 'expert' && (
-                  <Link to="/contracts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                    My Contracts
-                  </Link>
+                {/* --- BUYER LINKS --- */}
+                {isBuyer && (
+                  <>
+                    <Link to="/experts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                      Find Experts
+                    </Link>
+                    <Link to="/projects" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                      My Projects
+                    </Link>
+                    {/* ✅ Added Contracts Link for Buyer */}
+                    <Link to="/contracts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                      My Contracts
+                    </Link>
+                  </>
                 )}
-                {user?.role === 'admin' && (
+
+                {/* --- EXPERT LINKS --- */}
+                {isExpert && (
+                  <>
+                    <Link to="/marketplace" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                      Find Work
+                    </Link>
+                    <Link to="/contracts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                      Active Contracts
+                    </Link>
+                  </>
+                )}
+
+                {/* --- ADMIN LINKS --- */}
+                {isAdmin && (
                   <Link to="/admin" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                    Admin
+                    Admin Panel
                   </Link>
                 )}
               </>
             ) : (
+              /* Public Links (Not Logged In) */
               <>
                 <Link to="/experts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                   Browse Experts
@@ -82,7 +114,7 @@ export function Navbar() {
             )}
           </div>
 
-          {/* Desktop Auth */}
+          {/* Desktop Auth & Profile Menu */}
           <div className="hidden md:flex md:items-center md:gap-4">
             {isAuthenticated ? (
               <DropdownMenu>
@@ -90,7 +122,7 @@ export function Navbar() {
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-primary text-primary-foreground">
-                        {user?.name ? getInitials(user.name) : 'U'}
+                        {user?.first_name || user?.last_name ? getInitials(user?.first_name ?? '', user?.last_name ?? '') : 'U'}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -99,29 +131,40 @@ export function Navbar() {
                   <div className="flex items-center gap-2 p-2">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                        {user?.name ? getInitials(user.name) : 'U'}
+                        {user?.first_name || user?.last_name ? getInitials(user?.first_name ?? '', user?.last_name ?? '') : 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium">{user?.name}</span>
-                      <span className="text-xs text-muted-foreground capitalize">{user?.role}</span>
+                      <p className="text-sm font-bold">{user?.first_name}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
                     </div>
                   </div>
                   <DropdownMenuSeparator />
+                  
                   <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                     <LayoutDashboard className="mr-2 h-4 w-4" />
                     Dashboard
                   </DropdownMenuItem>
+                  
                   <DropdownMenuItem onClick={() => navigate('/profile')}>
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
-                  {user?.role === 'buyer' && (
+                  
+                  {isBuyer && (
                     <DropdownMenuItem onClick={() => navigate('/projects/new')}>
                       <FileText className="mr-2 h-4 w-4" />
                       Create Project
                     </DropdownMenuItem>
                   )}
+
+                  {isExpert && (
+                    <DropdownMenuItem onClick={() => navigate('/marketplace')}>
+                      <Search className="mr-2 h-4 w-4" />
+                      Find Work
+                    </DropdownMenuItem>
+                  )}
+                  
                   <DropdownMenuItem onClick={() => navigate('/messages')}>
                     <MessageSquare className="mr-2 h-4 w-4" />
                     Messages
@@ -173,22 +216,60 @@ export function Navbar() {
                   <LayoutDashboard className="h-5 w-5" />
                   Dashboard
                 </Link>
-                <Link 
-                  to="/experts" 
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Search className="h-5 w-5" />
-                  Find Experts
-                </Link>
-                <Link 
-                  to="/projects" 
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Briefcase className="h-5 w-5" />
-                  Projects
-                </Link>
+
+                {/* BUYER Mobile Links */}
+                {isBuyer && (
+                  <>
+                    <Link 
+                      to="/experts" 
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Search className="h-5 w-5" />
+                      Find Experts
+                    </Link>
+                    <Link 
+                      to="/projects" 
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Briefcase className="h-5 w-5" />
+                      My Projects
+                    </Link>
+                    {/* ✅ Added Contracts Link for Buyer Mobile */}
+                    <Link 
+                      to="/contracts" 
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <FileText className="h-5 w-5" />
+                      My Contracts
+                    </Link>
+                  </>
+                )}
+
+                {/* EXPERT Mobile Links */}
+                {isExpert && (
+                  <>
+                    <Link 
+                      to="/marketplace" 
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Globe className="h-5 w-5" />
+                      Find Work
+                    </Link>
+                    <Link 
+                      to="/contracts" 
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <FileText className="h-5 w-5" />
+                      Active Contracts
+                    </Link>
+                  </>
+                )}
+
                 <Link 
                   to="/profile" 
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted"
@@ -206,6 +287,7 @@ export function Navbar() {
                 </button>
               </>
             ) : (
+              /* Public Mobile Links */
               <>
                 <Link 
                   to="/experts" 

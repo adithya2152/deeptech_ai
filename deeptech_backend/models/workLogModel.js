@@ -1,64 +1,238 @@
-import pool from '../config/db.js';
+import pool from "../config/db.js";
 
 const WorkLog = {
-    createLog: async (contractId, expertId, logData) => {
-        const { date, hours, description, valueTags } = logData;
-        const query = `
-      INSERT INTO work_logs (contract_id, expert_id, log_date, hours_worked, description, value_tags)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, contract_id as "contractId", expert_id as "expertId", 
-                log_date as date, hours_worked as hours, description, 
-                value_tags as "valueTags", status, buyer_comment as "buyerComment", created_at as "createdAt";
-    `;
-        const { rows } = await pool.query(query, [contractId, expertId, date, hours, description, valueTags]);
-        return rows[0];
-    },
+  // Create a new work log (matches Supabase schema)
+  create: async (data) => {
+    const {
+      contract_id,
+      type,
+      checklist,
+      problems_faced,
+      sprint_number,
+      evidence,
+      description,
+      log_date,
+    } = data;
 
-    getLogsByContract: async (contractId) => {
-        const query = `
-      SELECT id, contract_id as "contractId", expert_id as "expertId", 
-             log_date as date, hours_worked as hours, description, 
-             value_tags as "valueTags", status, buyer_comment as "buyerComment", created_at as "createdAt"
-      FROM work_logs WHERE contract_id = $1 ORDER BY log_date DESC;
-    `;
-        const { rows } = await pool.query(query, [contractId]);
-        return rows;
-    },
-
-    updateStatus: async (logId, status, comment) => {
-        const query = `
-      UPDATE work_logs SET status = $2, buyer_comment = $3 WHERE id = $1 
-      RETURNING id, status, buyer_comment as "buyerComment";
-    `;
-        const { rows } = await pool.query(query, [logId, status, comment]);
-        return rows[0];
-    },
-
-    getWeeklySummary: async (contractId, weekStart) => {
     const query = `
-      SELECT 
-        COALESCE(SUM(hours_worked), 0) as "totalHours",
-        COALESCE(SUM(CASE WHEN status = 'approved' THEN hours_worked ELSE 0 END), 0) as "approvedHours",
-        COALESCE(SUM(CASE WHEN status = 'submitted' THEN hours_worked ELSE 0 END), 0) as "pendingHours",
-        COALESCE(SUM(CASE WHEN status = 'rejected' THEN hours_worked ELSE 0 END), 0) as "rejectedHours"
+      INSERT INTO work_logs (
+        contract_id,
+        type,
+        checklist,
+        problems_faced,
+        sprint_number,
+        evidence,
+        description,
+        log_date
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, NOW()::date))
+      RETURNING *;
+    `;
+
+    const values = [
+      contract_id,
+      type,
+      checklist ? JSON.stringify(checklist) : null,
+      problems_faced ?? null,
+      sprint_number ?? null,
+      evidence ? JSON.stringify(evidence) : null,
+      description ?? null,
+      log_date ?? null,
+    ];
+
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  },
+
+  // Get work log by ID
+  getById: async (id) => {
+    const query = `SELECT * FROM work_logs WHERE id = $1`;
+    const { rows } = await pool.query(query, [id]);
+    return rows[0];
+  },
+
+  // Get all work logs for a contract
+  getByContractId: async (contract_id) => {
+    const query = `
+      SELECT * FROM work_logs 
+      WHERE contract_id = $1 
+      ORDER BY created_at DESC
+    `;
+    const { rows } = await pool.query(query, [contract_id]);
+    return rows;
+  },
+
+  // Get work logs by expert (via contract)
+  getByExpertId: async (expert_id) => {
+    const query = `
+      SELECT wl.* 
+      FROM work_logs wl
+      JOIN contracts c ON wl.contract_id = c.id
+      WHERE c.expert_id = $1
+      ORDER BY wl.created_at DESC
+    `;
+    const { rows } = await pool.query(query, [expert_id]);
+    return rows;
+  },
+
+  // Check for recent daily logs (24-hour limit)
+  getRecentDailyLogs: async (contract_id) => {
+    const query = `
+      SELECT * FROM work_logs 
+      WHERE contract_id = $1 
+        AND type = 'daily_log'
+        AND created_at > NOW() - INTERVAL '24 hours'
+        AND status != 'rejected'
+      ORDER BY created_at DESC
+    `;
+    const { rows } = await pool.query(query, [contract_id]);
+    return rows;
+  },
+
+  // Get sprint logs for a specific sprint
+  getSprintLogs: async (contract_id, sprint_number) => {
+    const query = `
+      SELECT * FROM work_logs 
+      WHERE contract_id = $1 
+        AND sprint_number = $2
+        AND type = 'sprint_submission'
+      ORDER BY created_at DESC
+    `;
+    const { rows } = await pool.query(query, [contract_id, sprint_number]);
+    return rows;
+  },
+
+  // NEW: Get logs for exact date + type
+  getLogsByDateAndType: async (contract_id, type, log_date) => {
+    const query = `
+      SELECT * FROM work_logs 
+      WHERE contract_id = $1 
+        AND type = $2
+        AND log_date = $3::date
+        AND status != 'deleted'
+        AND status != 'rejected'
+    `;
+    const { rows } = await pool.query(query, [contract_id, type, log_date]);
+    return rows;
+  },
+
+  // NEW: Count sprint submissions for sprint number
+  countSprintSubmissions: async (contract_id, sprint_number) => {
+    const query = `
+      SELECT COUNT(*) as count 
       FROM work_logs 
       WHERE contract_id = $1 
-      AND log_date >= $2::date 
-      AND log_date < ($2::date + INTERVAL '7 days');
+        AND sprint_number = $2
+        AND type = 'sprint_submission'
+        AND status != 'deleted'
+        AND status != 'rejected'
     `;
-    const { rows } = await pool.query(query, [contractId, weekStart]);
-    
-    const contractQuery = `SELECT weekly_hour_cap FROM contracts WHERE id = $1`;
-    const contractRes = await pool.query(contractQuery, [contractId]);
-    const weeklyLimit = contractRes.rows[0]?.weekly_hour_cap || 0;
+    const { rows } = await pool.query(query, [contract_id, sprint_number]);
+    return parseInt(rows[0].count);
+  },
 
-    const summary = rows[0];
-    return {
-      ...summary,
-      weeklyLimit,
-      remainingHours: Math.max(0, weeklyLimit - summary.totalHours)
-    };
-  }
+  // NEW: Count milestone requests total
+  countMilestoneRequests: async (contract_id) => {
+    const query = `
+      SELECT COUNT(*) as count 
+      FROM work_logs 
+      WHERE contract_id = $1 
+        AND type = 'milestone_request'
+        AND status != 'deleted'
+        AND status != 'rejected'  
+    `;
+    const { rows } = await pool.query(query, [contract_id]);
+    return parseInt(rows[0].count);
+  },
+
+  // NEW: Validate submission limits
+  validateSubmission: async (contract_id, type, sprint_number, log_date) => {
+    switch (type) {
+      case 'daily_log':
+        // Check exact date
+        const dateLogs = await WorkLog.getLogsByDateAndType(contract_id, type, log_date);
+        if (dateLogs.length > 0) {
+          return `Already submitted for ${log_date}`;
+        }
+        // Check 24h window
+        const recentLogs = await WorkLog.getRecentDailyLogs(contract_id);
+        if (recentLogs.length > 0) {
+          return 'Only 1 daily log per 24 hours allowed';
+        }
+        return null;
+
+      case 'sprint_submission':
+        const sprintCount = await WorkLog.countSprintSubmissions(contract_id, sprint_number);
+        if (sprintCount >= 3) {
+          return 'Max 3 submissions per sprint reached';
+        }
+        return null;
+
+      case 'milestone_request':
+        const milestoneCount = await WorkLog.countMilestoneRequests(contract_id);
+        if (milestoneCount >= 5) {
+          return 'Max 5 milestone requests per contract reached';
+        }
+        return null;
+
+      default:
+        return null;
+    }
+  },
+
+  // Update work log status (for finishing sprint)
+  updateStatus: async (id, data) => {
+    const { status, buyer_comment } = data;
+
+    const query = `
+      UPDATE work_logs 
+      SET 
+        status = COALESCE($2, status),
+        buyer_comment = COALESCE($3, buyer_comment)
+      WHERE id = $1
+      RETURNING *;
+    `;
+
+    const { rows } = await pool.query(query, [
+      id,
+      status,
+      buyer_comment ?? null,
+    ]);
+
+    return rows[0];
+  },
+
+  // Update work log
+  update: async (id, data) => {
+    const { checklist, problems_faced, evidence, description } = data;
+
+    const query = `
+    UPDATE work_logs 
+    SET 
+      checklist = COALESCE($1, checklist),
+      problems_faced = COALESCE($2, problems_faced),
+      evidence = COALESCE($3, evidence),
+      description = COALESCE($4, description)
+    WHERE id = $5
+    RETURNING *;
+  `;
+
+    const { rows } = await pool.query(query, [
+      checklist ? JSON.stringify(checklist) : null,
+      problems_faced ?? null,
+      evidence ? JSON.stringify(evidence) : null,
+      description ?? null,
+      id,
+    ]);
+    return rows[0];
+  },
+
+  // Delete work log
+  delete: async (id) => {
+    const query = `DELETE FROM work_logs WHERE id = $1 RETURNING *`;
+    const { rows } = await pool.query(query, [id]);
+    return rows[0];
+  },
 };
 
 export default WorkLog;

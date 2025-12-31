@@ -9,6 +9,7 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
+import MarketplacePage from '@/pages/marketplace/MarketplacePage';
 import ProfilePage from "./pages/profile/ProfilePage";
 import ExpertDiscoveryPage from "./pages/experts/ExpertDiscoveryPage";
 import ExpertProfilePage from "./pages/experts/ExpertProfilePage";
@@ -37,6 +38,7 @@ const App = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/marketplace" element={<MarketplacePage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/experts" element={<ExpertDiscoveryPage />} />
             <Route path="/experts/:id" element={<ExpertProfilePage />} />

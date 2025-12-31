@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Expert } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // ✅ Added AvatarImage
 import { Star, Clock, MapPin, Shield, CheckCircle } from 'lucide-react';
 import { domainLabels } from '@/lib/constants';
 
@@ -13,8 +13,9 @@ interface ExpertCardProps {
 export function ExpertCard({ expert }: ExpertCardProps) {
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
 
+  // Helper to render vetting badge
   const getVettingBadge = () => {
-    if (expert.vettingLevel === 'deep_tech_verified') {
+    if (expert.vetting_level === 'deep_tech_verified') {
       return (
         <Badge className="bg-primary text-primary-foreground gap-1">
           <Shield className="h-3 w-3" />
@@ -22,7 +23,7 @@ export function ExpertCard({ expert }: ExpertCardProps) {
         </Badge>
       );
     }
-    if (expert.vettingLevel === 'advanced') {
+    if (expert.vetting_level === 'advanced') {
       return (
         <Badge variant="secondary" className="gap-1">
           <CheckCircle className="h-3 w-3" />
@@ -39,6 +40,8 @@ export function ExpertCard({ expert }: ExpertCardProps) {
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
             <Avatar className="h-14 w-14 ring-2 ring-border group-hover:ring-primary/50 transition-all">
+              {/* ✅ FIX: Added Image component to show user avatar if available */}
+              <AvatarImage src={expert.avatar_url} />
               <AvatarFallback className="bg-primary text-primary-foreground text-lg">
                 {getInitials(expert.name)}
               </AvatarFallback>
@@ -50,7 +53,7 @@ export function ExpertCard({ expert }: ExpertCardProps) {
               </div>
               <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                 <MapPin className="h-3.5 w-3.5" />
-                {expert.location || 'Remote'}
+                {expert.location}
               </div>
             </div>
           </div>
@@ -71,15 +74,15 @@ export function ExpertCard({ expert }: ExpertCardProps) {
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 fill-warning text-warning" />
               <span className="font-medium">{expert.rating}</span>
-              <span className="text-sm text-muted-foreground">({expert.reviewCount})</span>
+              <span className="text-sm text-muted-foreground">({expert.review_count})</span>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                {expert.totalHours}h
+                {expert.total_hours}h
               </div>
               <div className="font-semibold text-foreground">
-                ${expert.hourlyRates?.advisory || 0}/hr
+                ${expert.hourly_rate_advisory}/hr
               </div>
             </div>
           </div>

@@ -1,8 +1,8 @@
 export type UserRole = 'buyer' | 'expert' | 'admin';
 
-export type VettingStatus = 'pending' | 'approved' | 'rejected' | 'info_requested';
+export type VettingStatus = 'pending' | 'approved' | 'rejected' | 'info_requested' | 'verified';
 
-export type ProjectStatus = 'draft' | 'active' | 'completed' | 'archived';
+export type ProjectStatus = 'draft' | 'open' | 'active' | 'completed' | 'archived';
 
 export type ContractStatus = 'pending' | 'active' | 'declined' | 'paused' | 'completed' | 'disputed';
 
@@ -45,26 +45,40 @@ export interface User {
   last_logout?: string | null;
 }
 
-export interface Expert extends User {
-  bio: string;
+export interface Profile extends User {
+  avatar_url?: string;
+  bio?: string;
   location?: string;
+  rating?: number;
+  vetting_status?: VettingStatus;
+  hourly_rate_advisory?: number;
+  total_hours?: number;
+  review_count?: number;
+  domains?: Domain[];
+  company?: string;
+  project_count?: number;
+}
+
+export interface Expert extends User {
+  avatar_url?: string;
+  bio: string;
+  location: string;
   name: string;
   role: 'expert';
   domains: Domain[];
-  experienceSummary: string;
-  hourlyRates: {
-    advisory: number;
-    architectureReview: number;
-    handsOnExecution: number;
-  };
-  vettingStatus: VettingStatus;
-  vettingLevel?: 'general' | 'advanced' | 'deep_tech_verified';
+  experience_summary: string;
+  hourly_rate_advisory: number;
+  hourly_rate_architecture: number;
+  hourly_rate_execution: number;
+  availability: AvailabilitySlot[];
+  vetting_status: VettingStatus;
+  vetting_level?: 'general' | 'advanced' | 'deep_tech_verified';
   patents?: string[];
   papers?: string[];
   products?: string[];
-  totalHours: number;
+  total_hours: number;
   rating: number;
-  reviewCount: number;
+  review_count: number;
 }
 
 export interface Buyer extends User {
@@ -81,7 +95,8 @@ export interface AvailabilitySlot {
 
 export interface Project {
   id: string;
-  client_id: string;
+  buyer_id: string;
+  expert_id?: string;
   title: string;
   domain: Domain;
   description: string;
@@ -94,6 +109,22 @@ export interface Project {
   status: ProjectStatus;
   created_at: string;
   updated_at: string;
+  buyer_name?: string; 
+  buyer?: { first_name: string; last_name: string }; 
+  proposal_count?: number;
+}
+
+export interface Proposal {
+  id: string;
+  project_id: string;
+  expert_id: string;
+  expert_name: string;
+  expert_avatar?: string;
+  quote_amount: number;
+  duration_days: number;
+  message: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
 }
 
 export interface Contract {
@@ -114,6 +145,8 @@ export interface Contract {
   status: ContractStatus;
   created_at: string;
   updated_at: string;
+  project?: { title: string }; 
+  expert?: { first_name: string; last_name: string }; 
 }
 
 export interface HourLog {
@@ -130,8 +163,8 @@ export interface HourLog {
     knowledge_transferred?: string;
     problem_solved?: string;
   };
-  status: 'submitted' | 'approved' | 'rejected';
-  buyer_comment?: string;
+  status: 'submitted' | 'approved' | 'rejected' | 'pending';
+  rejection_reason?: string;
   created_at?: string;
 }
 
@@ -155,12 +188,13 @@ export interface FileAttachment {
 export interface Invoice {
   id: string;
   contract_id: string;
-  week_start_date: Date;
-  week_end_date: Date;
+  week_start_date: string;
+  week_end_date: string;
   total_hours: number;
   total_amount: number;
   status: 'pending' | 'paid';
   pdf_url?: string;
+  created_at: string;
 }
 
 export interface Dispute {
@@ -170,5 +204,5 @@ export interface Dispute {
   reason: string;
   description: string;
   status: 'open' | 'under_review' | 'resolved';
-  created_at: Date;
+  created_at: string;
 }

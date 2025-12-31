@@ -132,23 +132,23 @@ async def semantic_search(request: SearchRequest):
                 bio=expert['bio'],
                 domains=expert['domains'] or [],
                 skills=expert['skills'] or [],
-                hourly_rates=HourlyRates(
+                hourlyRates=HourlyRates(
                     advisory=expert['hourly_rate_advisory'],
-                    architecture_review=expert['hourly_rate_architecture'],
-                    hands_on_execution=expert['hourly_rate_execution']
+                    architectureReview=expert['hourly_rate_architecture'],
+                    handsOnExecution=expert['hourly_rate_execution']
                 ),
-                vetting_status=expert['vetting_status'],
+                vettingStatus=expert['vetting_status'],
                 rating=expert['rating'],
-                review_count=expert['review_count'],
-                total_hours=expert['total_hours'],
+                reviewCount=expert['review_count'],
+                totalHours=expert['total_hours'],
                 availability=expert['availability'],
-                similarity_score=expert['similarity_score']
+                similarityScore=expert['similarity_score']
             ))
 
         return SearchResponse(
             query=request.query,
             results=experts,
-            total_results=len(experts)
+            totalResults=len(experts)
         )
 
     except Exception as e:

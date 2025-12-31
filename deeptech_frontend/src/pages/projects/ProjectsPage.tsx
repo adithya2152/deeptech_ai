@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/button'
@@ -17,35 +17,44 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | ProjectStatus>('all')
 
-  const isBuyer = user?.role === 'buyer'
-  const isExpert = user?.role === 'expert'
+  useEffect(() => {
+    if (user?.role === 'expert') {
+      navigate('/marketplace');
+    }
+  }, [user, navigate]);
 
-  // Buyers: show their own projects with all statuses
-  // Experts: show only active projects from all buyers (browse mode)
-  const { data: allProjects, isLoading: loadingAll } = useProjects()
-  const { data: draftProjects, isLoading: loadingDrafts } = useProjects('draft')
-  const { data: activeProjects, isLoading: loadingActive } = useProjects('active')
-  const { data: completedProjects, isLoading: loadingCompleted } = useProjects('completed')
-  const { data: archivedProjects, isLoading: loadingArchived } = useProjects('archived')
+  // Fetching data
+  const { data: allProjects, isLoading: l1 } = useProjects()
+  const { data: draftProjects, isLoading: l2 } = useProjects('draft')
+  const { data: myActiveProjects, isLoading: l3 } = useProjects('active')
+  const { data: completedProjects, isLoading: l4 } = useProjects('completed')
+  const { data: archivedProjects, isLoading: l5 } = useProjects('archived')
 
-  const isLoading = loadingAll || loadingDrafts || loadingActive || loadingCompleted || loadingArchived
-
-  const getProjectsForTab = () => {
+  // ✅ Optimization: Only show loading for the currently active tab
+  const isCurrentTabLoading = () => {
     switch (activeTab) {
-      case 'draft':
-        return draftProjects || []
-      case 'active':
-        return activeProjects || []
-      case 'completed':
-        return completedProjects || []
-      case 'archived':
-        return archivedProjects || []
-      default:
-        return allProjects || []
+      case 'draft': return l2;
+      case 'active': return l3;
+      case 'completed': return l4;
+      case 'archived': return l5;
+      default: return l1;
     }
   }
 
-  const filteredProjects = getProjectsForTab().filter(project =>
+  const getProjectsForTab = () => {
+    switch (activeTab) {
+      case 'draft': return draftProjects || []
+      case 'active': return myActiveProjects || []
+      case 'completed': return completedProjects || []
+      case 'archived': return archivedProjects || []
+      default: return allProjects || []
+    }
+  }
+
+  const currentList = getProjectsForTab()
+  const isLoading = isCurrentTabLoading()
+
+  const filteredProjects = currentList.filter(project =>
     project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     project.domain.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -56,14 +65,12 @@ export default function ProjectsPage() {
         <FolderOpen className="h-16 w-16 text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">No {status} projects</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          {isExpert
-            ? `No ${status === 'all' ? '' : status} projects available at the moment. Check back soon for new opportunities.`
-            : status === 'all' 
-              ? 'Get started by creating your first project' 
-              : `You don't have any ${status} projects yet`
+          {status === 'all' 
+             ? 'Get started by creating your first project' 
+             : `You don't have any ${status} projects yet`
           }
         </p>
-        {status === 'all' && isBuyer && (
+        {status === 'all' && (
           <Button onClick={() => navigate('/projects/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Create Project
@@ -73,83 +80,6 @@ export default function ProjectsPage() {
     </Card>
   )
 
-  // Experts only see active projects tab (no draft/completed/archived from other buyers)
-  if (isExpert) {
-    return (
-      <Layout>
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="font-display text-3xl font-bold">Browse Projects</h1>
-              <p className="text-muted-foreground mt-1">
-                Discover active projects matching your expertise
-              </p>
-            </div>
-          </div>
-
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search projects by title or domain..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          {/* Expert View: Only Active Projects */}
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold">
-              Active Projects {activeProjects && `(${activeProjects.length})`}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Projects currently seeking expert collaboration
-            </p>
-          </div>
-
-          {loadingActive ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (activeProjects || []).filter(project =>
-              project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              project.domain.toLowerCase().includes(searchQuery.toLowerCase())
-            ).length === 0 ? (
-            searchQuery ? (
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <Search className="h-16 w-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No results found</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Try adjusting your search query
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <EmptyState status="active" />
-            )
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {(activeProjects || [])
-                .filter(project =>
-                  project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  project.domain.toLowerCase().includes(searchQuery.toLowerCase())
-                )
-                .map((project) => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-            </div>
-          )}
-        </div>
-      </Layout>
-    )
-  }
-
-  // Buyer View: Full project management with all status tabs
   return (
     <Layout>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -167,12 +97,12 @@ export default function ProjectsPage() {
           </Button>
         </div>
 
-        {/* Search Bar */}
+        {/* Search */}
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search projects by title or domain..."
+              placeholder="Search your projects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -180,24 +110,14 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs & Grid */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
           <TabsList className="mb-6">
-            <TabsTrigger value="all">
-              All {allProjects && `(${allProjects.length})`}
-            </TabsTrigger>
-            <TabsTrigger value="draft">
-              Draft {draftProjects && `(${draftProjects.length})`}
-            </TabsTrigger>
-            <TabsTrigger value="active">
-              Active {activeProjects && `(${activeProjects.length})`}
-            </TabsTrigger>
-            <TabsTrigger value="completed">
-              Completed {completedProjects && `(${completedProjects.length})`}
-            </TabsTrigger>
-            <TabsTrigger value="archived">
-              Archived {archivedProjects && `(${archivedProjects.length})`}
-            </TabsTrigger>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="draft">Draft</TabsTrigger>
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
+            <TabsTrigger value="archived">Archived</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab}>
@@ -211,9 +131,7 @@ export default function ProjectsPage() {
                   <CardContent className="flex flex-col items-center justify-center py-16">
                     <Search className="h-16 w-16 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2">No results found</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Try adjusting your search query
-                    </p>
+                    <p className="text-sm text-muted-foreground">Try adjusting your search query</p>
                   </CardContent>
                 </Card>
               ) : (

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useEffect } from 'react'
+import { useForm, Controller } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Dialog,
@@ -22,292 +22,249 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
-import { contractService, CreateContractInput } from '@/services/contractService'
+import { contractsApi } from '@/lib/api'
 import { Expert } from '@/types'
-import { Loader2, DollarSign, Clock, Calendar, Shield, FileText } from 'lucide-react'
+import { Loader2, DollarSign, Clock, Calendar, Shield, FileText, Info } from 'lucide-react'
+import { Card } from '../ui/card'
 
 interface ContractCreationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  projectId: string
+  project_id: string
   expert: Expert
   onSuccess?: () => void
 }
 
 interface FormData {
-  engagementType: 'hourly' | 'fixed'
-  hourlyRate: number
-  weeklyHourCap: number
-  startDate: string
-  endDate: string
-  ipOwnership: 'client' | 'shared' | 'expert'
-  ndaSigned: boolean
-  escrowAmount: number
+  engagement_type: 'advisory' | 'architecture_review' | 'hands_on_execution'
+  hourly_rate: number
+  weekly_hour_cap: number
+  start_date: string
+  end_date?: string
+  ip_ownership: 'buyer_owns' | 'shared' | 'expert_owns'
+  nda_signed: boolean
 }
 
 export function ContractCreationDialog({
   open,
   onOpenChange,
-  projectId,
+  project_id,
   expert,
   onSuccess,
 }: ContractCreationDialogProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { token } = useAuth()
-  const [engagementType, setEngagementType] = useState<'hourly' | 'fixed'>('hourly')
 
   const {
     register,
     handleSubmit,
+    control,
+    watch,
     formState: { errors },
     reset,
     setValue,
   } = useForm<FormData>({
     defaultValues: {
-      engagementType: 'hourly',
-      weeklyHourCap: 40,
-      ipOwnership: 'client',
-      ndaSigned: false,
+      engagement_type: 'advisory',
+      weekly_hour_cap: 10,
+      ip_ownership: 'buyer_owns',
+      nda_signed: true,
+      hourly_rate: expert.hourly_rate_advisory || 0,
+      start_date: new Date().toISOString().split('T')[0],
     },
   })
 
+  const watched_rate = watch('hourly_rate')
+  const watched_cap = watch('weekly_hour_cap')
+  const watched_type = watch('engagement_type')
+
+  useEffect(() => {
+    if (watched_type === 'advisory') setValue('hourly_rate', expert.hourly_rate_advisory)
+    if (watched_type === 'architecture_review') setValue('hourly_rate', expert.hourly_rate_architecture)
+    if (watched_type === 'hands_on_execution') setValue('hourly_rate', expert.hourly_rate_execution)
+  }, [watched_type, expert, setValue])
+
   const createContractMutation = useMutation({
-    mutationFn: (data: CreateContractInput) => contractService.createContract(data, token || undefined),
+    mutationFn: (data: any) => contractsApi.createContract(data, token!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts'] })
       toast({
-        title: 'Contract Created',
-        description: `Contract invitation sent to ${expert.name}. They will be notified to review and accept.`,
+        title: 'Contract Invitation Sent',
+        description: `Terms sent to ${expert.first_name}. Work can begin once they accept.`,
       })
       reset()
       onOpenChange(false)
       onSuccess?.()
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create contract',
+        description: error.response?.data?.message || 'Failed to create contract',
         variant: 'destructive',
       })
     },
   })
 
   const onSubmit = (data: FormData) => {
-    const input: CreateContractInput = {
-      projectId,
-      expertId: expert.id,
-      engagementType: data.engagementType,
-      hourlyRate: Number(data.hourlyRate),
-      weeklyHourCap: Number(data.weeklyHourCap),
-      startDate: data.startDate,
-      endDate: data.endDate || undefined,
-      ipOwnership: data.ipOwnership,
-      ndaSigned: data.ndaSigned,
-      escrowAmount: data.escrowAmount ? Number(data.escrowAmount) : undefined,
+    const payload = {
+      ...data,
+      project_id,
+      expert_id: expert.id,
+      hourly_rate: Number(data.hourly_rate),
+      weekly_hour_cap: Number(data.weekly_hour_cap),
+      status: 'pending'
     }
-
-    createContractMutation.mutate(input)
+    createContractMutation.mutate(payload)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Contract with {expert.name}</DialogTitle>
+          <DialogTitle className="text-2xl">Engagement Terms</DialogTitle>
           <DialogDescription>
-            Set up the terms for your collaboration. The expert will review and accept the
-            contract before work begins.
+            Defining collaboration with <strong>{expert.first_name} {expert.last_name}</strong>
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Engagement Type */}
-          <div className="space-y-2">
-            <Label htmlFor="engagementType">
-              <Clock className="inline h-4 w-4 mr-2" />
-              Engagement Type
-            </Label>
-            <Select
-              value={engagementType}
-              onValueChange={(value: 'hourly' | 'fixed') => {
-                setEngagementType(value)
-                setValue('engagementType', value)
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="hourly">Hourly Rate (Recommended)</SelectItem>
-                <SelectItem value="fixed">Fixed Price Project</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              Hourly contracts provide flexibility and transparent time tracking
-            </p>
-          </div>
-
-          {/* Hourly Rate */}
-          <div className="space-y-2">
-            <Label htmlFor="hourlyRate">
-              <DollarSign className="inline h-4 w-4 mr-2" />
-              Hourly Rate (USD)
-            </Label>
-            <Input
-              id="hourlyRate"
-              type="number"
-              step="0.01"
-              placeholder="150.00"
-              {...register('hourlyRate', {
-                required: 'Hourly rate is required',
-                min: { value: 1, message: 'Rate must be at least $1' },
-              })}
-            />
-            {errors.hourlyRate && (
-              <p className="text-sm text-destructive">{errors.hourlyRate.message}</p>
-            )}
-            <p className="text-sm text-muted-foreground">
-              Market rate range for similar experts in this domain
-            </p>
-          </div>
-
-          {/* Weekly Hour Cap */}
-          {engagementType === 'hourly' && (
-            <div className="space-y-2">
-              <Label htmlFor="weeklyHourCap">
-                <Clock className="inline h-4 w-4 mr-2" />
-                Weekly Hour Cap
-              </Label>
-              <Input
-                id="weeklyHourCap"
-                type="number"
-                placeholder="40"
-                {...register('weeklyHourCap', {
-                  required: 'Weekly hour cap is required',
-                  min: { value: 1, message: 'Must be at least 1 hour' },
-                  max: { value: 168, message: 'Cannot exceed 168 hours per week' },
-                })}
-              />
-              {errors.weeklyHourCap && (
-                <p className="text-sm text-destructive">{errors.weeklyHourCap.message}</p>
-              )}
-              <p className="text-sm text-muted-foreground">
-                Maximum hours the expert can log per week
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
+          <Card className="p-4 bg-primary/5 border-primary/20 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-full">
+                <Info className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Weekly Budget Cap</p>
+                <p className="text-xs text-muted-foreground">Based on current terms</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xl font-bold text-primary">
+                ${(watched_rate * watched_cap).toLocaleString()}
               </p>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground">Max Per Week</p>
             </div>
-          )}
+          </Card>
 
-          {/* Date Range */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="startDate">
-                <Calendar className="inline h-4 w-4 mr-2" />
-                Start Date
-              </Label>
-              <Input
-                id="startDate"
-                type="date"
-                {...register('startDate', {
-                  required: 'Start date is required',
-                })}
+              <Label>Engagement Type</Label>
+              <Controller
+                name="engagement_type"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="advisory">Strategic Advisory</SelectItem>
+                      <SelectItem value="architecture_review">Architecture Review</SelectItem>
+                      <SelectItem value="hands_on_execution">Hands-on Execution</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               />
-              {errors.startDate && (
-                <p className="text-sm text-destructive">{errors.startDate.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="endDate">
-                <Calendar className="inline h-4 w-4 mr-2" />
-                End Date (Optional)
-              </Label>
-              <Input id="endDate" type="date" {...register('endDate')} />
-              <p className="text-sm text-muted-foreground">Leave blank for ongoing</p>
+              <Label>Hourly Rate (USD)</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="number"
+                  className="pl-9"
+                  {...register('hourly_rate', { required: true, min: 1 })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Weekly Hour Limit</Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="number"
+                  className="pl-9"
+                  {...register('weekly_hour_cap', { required: true, min: 1, max: 168 })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Start Date</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="date"
+                  className="pl-9"
+                  {...register('start_date', { required: true })}
+                />
+              </div>
             </div>
           </div>
 
-          {/* IP Ownership */}
-          <div className="space-y-2">
-            <Label htmlFor="ipOwnership">
-              <Shield className="inline h-4 w-4 mr-2" />
-              Intellectual Property Ownership
-            </Label>
-            <Select
-              defaultValue="client"
-              onValueChange={(value: 'client' | 'shared' | 'expert') =>
-                setValue('ipOwnership', value)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="client">Client Owns All IP</SelectItem>
-                <SelectItem value="shared">Shared IP Rights</SelectItem>
-                <SelectItem value="expert">Expert Retains IP</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              Defines who owns the intellectual property created during this engagement
-            </p>
-          </div>
+          <div className="space-y-4 pt-4 border-t">
+            <Label className="text-base">Legal & IP Terms</Label>
+            
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">IP Ownership</Label>
+              <Controller
+                name="ip_ownership"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="buyer_owns">Buyer Owns All IP (Standard)</SelectItem>
+                      <SelectItem value="shared">Shared Intellectual Property</SelectItem>
+                      <SelectItem value="expert_owns">Expert Retains Rights</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
 
-          {/* NDA */}
-          <div className="flex items-start space-x-3">
-            <Checkbox
-              id="ndaSigned"
-              {...register('ndaSigned')}
-              onCheckedChange={(checked) => setValue('ndaSigned', checked as boolean)}
-            />
-            <div className="space-y-1">
-              <Label htmlFor="ndaSigned" className="cursor-pointer">
-                <FileText className="inline h-4 w-4 mr-2" />
-                Non-Disclosure Agreement (NDA)
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Expert agrees to keep all project information confidential
-              </p>
+            <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+              <Checkbox
+                id="nda_signed"
+                defaultChecked={true}
+                onCheckedChange={(checked) => setValue('nda_signed', checked as boolean)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label htmlFor="nda_signed" className="text-sm font-medium flex items-center gap-2 cursor-pointer">
+                  <Shield className="h-3.5 w-3.5 text-primary" />
+                  Enforce Platform NDA
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Expert must agree to non-disclosure before logging hours.
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Escrow Amount (Optional) */}
-          <div className="space-y-2">
-            <Label htmlFor="escrowAmount">
-              <DollarSign className="inline h-4 w-4 mr-2" />
-              Initial Escrow Amount (Optional)
-            </Label>
-            <Input
-              id="escrowAmount"
-              type="number"
-              step="0.01"
-              placeholder="5000.00"
-              {...register('escrowAmount', {
-                min: { value: 0, message: 'Amount must be positive' },
-              })}
-            />
-            {errors.escrowAmount && (
-              <p className="text-sm text-destructive">{errors.escrowAmount.message}</p>
-            )}
-            <p className="text-sm text-muted-foreground">
-              Funds held in escrow to pay for approved hours. Can be added later.
-            </p>
-          </div>
-
-          <DialogFooter>
+          <DialogFooter className="pt-6">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={() => onOpenChange(false)}
-              disabled={createContractMutation.isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={createContractMutation.isPending}>
-              {createContractMutation.isPending && (
+            <Button 
+              type="submit" 
+              className="px-8" 
+              disabled={createContractMutation.isPending}
+            >
+              {createContractMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="mr-2 h-4 w-4" />
               )}
-              Send Contract Invitation
+              Send Contract for Review
             </Button>
           </DialogFooter>
         </form>

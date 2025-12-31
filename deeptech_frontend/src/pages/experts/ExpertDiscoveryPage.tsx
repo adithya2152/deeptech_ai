@@ -35,7 +35,6 @@ export default function ExpertDiscoveryPage() {
   const [sortBy, setSortBy] = useState<'rating' | 'rate' | 'hours'>('rating');
   const [useSemanticSearch, setUseSemanticSearch] = useState(false);
 
-  // Fetch real experts from database
   const { data: dbExperts, isLoading } = useExperts({
     domains: selectedDomains.length > 0 ? selectedDomains : undefined,
     onlyVerified,
@@ -46,15 +45,13 @@ export default function ExpertDiscoveryPage() {
     useSemanticSearch && searchQuery.trim() ? searchQuery : ''
   );
 
-  // Use semantic results only when AI search is enabled AND a query is entered
-  const useSemanticResults = useSemanticSearch && searchQuery.trim();
-  const experts = useSemanticResults ? semanticExperts : dbExperts;
-  const isLoadingExperts = useSemanticResults ? isSemanticLoading : isLoading;
+  const experts = useSemanticSearch ? semanticExperts : dbExperts;
+  const isLoadingExperts = useSemanticSearch ? isSemanticLoading : isLoading;
 
   const filteredExperts = useMemo(() => {
     if (!experts) return [];
 
-    if (useSemanticResults) {
+    if (useSemanticSearch) {
       // For semantic search, apply client-side filters to the results
       let filtered = [...experts];
 
@@ -67,24 +64,34 @@ export default function ExpertDiscoveryPage() {
 
       // Filter by rate
       filtered = filtered.filter(
-        e => (e.hourlyRates?.advisory || 0) >= rateRange[0] && (e.hourlyRates?.advisory || 0) <= rateRange[1]
+        e => (e.hourlyRates?.advisory || e.hourly_rate_advisory || 0) >= rateRange[0] &&
+             (e.hourlyRates?.advisory || e.hourly_rate_advisory || 0) <= rateRange[1]
       );
 
       // Filter by verified status
       if (onlyVerified) {
-        filtered = filtered.filter(e => e.vettingLevel === 'deep_tech_verified');
+        filtered = filtered.filter(e =>
+          e.vettingLevel === 'deep_tech_verified' ||
+          e.vetting_level === 'deep_tech_verified'
+        );
       }
 
       // Sort
       switch (sortBy) {
         case 'rating':
-          filtered.sort((a, b) => b.rating - a.rating);
+          filtered.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
           break;
         case 'rate':
-          filtered.sort((a, b) => a.hourlyRates?.advisory - b.hourlyRates?.advisory);
+          filtered.sort((a, b) => {
+            const rateA = a.hourlyRates?.advisory || a.hourly_rate_advisory || 0;
+            const rateB = b.hourlyRates?.advisory || b.hourly_rate_advisory || 0;
+            return rateA - rateB;
+          });
           break;
         case 'hours':
-          filtered.sort((a, b) => b.totalHours - a.totalHours);
+          filtered.sort((a, b) =>
+            (Number(b.totalHours || b.total_hours) || 0) - (Number(a.totalHours || a.total_hours) || 0)
+          );
           break;
       }
 
@@ -94,49 +101,61 @@ export default function ExpertDiscoveryPage() {
     // Original filtering logic for non-semantic search
     let filtered = [...experts];
 
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        e =>
-          e.name?.toLowerCase().includes(query) ||
-          e.bio?.toLowerCase().includes(query) ||
-          e.experience_summary?.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter(e => {
+        const name = e.name || `${e.first_name} ${e.last_name}`;
+        const summary = e.experienceSummary || e.experience_summary || '';
+        const bio = e.bio || '';
+
+        return name.toLowerCase().includes(query) ||
+               summary.toLowerCase().includes(query) ||
+               bio.toLowerCase().includes(query);
+      });
     }
 
-    // Filter by domains
     if (selectedDomains.length > 0) {
-      filtered = filtered.filter(e =>
-        e.domains.some(d => selectedDomains.includes(d))
-      );
+      filtered = filtered.filter(e => {
+        const expertDomains = e.domains || [];
+        return expertDomains.some((d: string) => selectedDomains.includes(d as Domain));
+      });
     }
 
     // Filter by rate
-    filtered = filtered.filter(
-      e => (e.hourlyRates?.advisory || 0) >= rateRange[0] && (e.hourlyRates?.advisory || 0) <= rateRange[1]
-    );
+    filtered = filtered.filter(e => {
+      const rate = e.hourlyRates?.advisory || e.hourly_rate_advisory || 0;
+      return rate >= rateRange[0] && rate <= rateRange[1];
+    });
 
     // Filter by verified status
     if (onlyVerified) {
-      filtered = filtered.filter(e => e.vettingLevel === 'deep_tech_verified');
+      filtered = filtered.filter(e =>
+        e.vettingLevel === 'deep_tech_verified' ||
+        e.vetting_level === 'deep_tech_verified'
+      );
     }
 
     // Sort
     switch (sortBy) {
       case 'rating':
-        filtered.sort((a, b) => b.rating - a.rating);
+        filtered.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
         break;
       case 'rate':
-        filtered.sort((a, b) => (a.hourlyRates?.advisory || 0) - (b.hourlyRates?.advisory || 0));
+        filtered.sort((a, b) => {
+          const rateA = a.hourlyRates?.advisory || a.hourly_rate_advisory || 0;
+          const rateB = b.hourlyRates?.advisory || b.hourly_rate_advisory || 0;
+          return rateA - rateB;
+        });
         break;
       case 'hours':
-        filtered.sort((a, b) => b.totalHours - a.totalHours);
+        filtered.sort((a, b) =>
+          (Number(b.totalHours || b.total_hours) || 0) - (Number(a.totalHours || a.total_hours) || 0)
+        );
         break;
     }
 
     return filtered;
-  }, [experts, searchQuery, selectedDomains, rateRange, onlyVerified, sortBy, useSemanticResults]);
+  }, [experts, searchQuery, selectedDomains, rateRange, onlyVerified, sortBy, useSemanticSearch]);
 
   const toggleDomain = (domain: Domain) => {
     setSelectedDomains(prev =>
@@ -216,7 +235,6 @@ export default function ExpertDiscoveryPage() {
   return (
     <Layout>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="font-display text-3xl font-bold">Find Experts</h1>
           <p className="mt-2 text-muted-foreground">
@@ -224,12 +242,11 @@ export default function ExpertDiscoveryPage() {
           </p>
         </div>
 
-        {/* Search and Filters Bar */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder={useSemanticSearch ? "Describe the expertise you need..." : "Search by name, expertise, or keywords..."}
+              placeholder="Search by name, expertise, or keywords..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -242,7 +259,7 @@ export default function ExpertDiscoveryPage() {
               className="whitespace-nowrap"
             >
               <Sparkles className="h-4 w-4 mr-2" />
-              AI Search
+              {useSemanticSearch ? "AI Search" : "Regular Search"}
             </Button>
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
               <SelectTrigger className="w-[160px]">
@@ -259,11 +276,6 @@ export default function ExpertDiscoveryPage() {
                 <Button variant="outline" className="lg:hidden">
                   <SlidersHorizontal className="h-4 w-4 mr-2" />
                   Filters
-                  {hasActiveFilters && (
-                    <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
-                      {selectedDomains.length + (onlyVerified ? 1 : 0)}
-                    </Badge>
-                  )}
                 </Button>
               </SheetTrigger>
               <SheetContent>
@@ -278,35 +290,16 @@ export default function ExpertDiscoveryPage() {
           </div>
         </div>
 
-        {/* Active Filters */}
-        {selectedDomains.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-6">
-            {selectedDomains.map(domain => (
-              <Badge
-                key={domain}
-                variant="secondary"
-                className="cursor-pointer"
-                onClick={() => toggleDomain(domain)}
-              >
-                {domainLabels[domain]}
-                <X className="h-3 w-3 ml-1" />
-              </Badge>
-            ))}
-          </div>
-        )}
-
         <div className="flex gap-8">
-          {/* Desktop Sidebar Filters */}
           <aside className="hidden lg:block w-64 shrink-0">
-            <div className="sticky top-24 p-4 bg-card rounded-lg border border-border">
+            <div className="sticky top-24 p-4 bg-card rounded-lg border">
               <h3 className="font-semibold mb-4">Filters</h3>
               <FilterContent />
             </div>
           </aside>
 
-          {/* Results */}
           <div className="flex-1">
-            {isLoadingExperts ? (
+            {isLoading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
@@ -314,11 +307,6 @@ export default function ExpertDiscoveryPage() {
               <>
                 <div className="mb-4 text-sm text-muted-foreground">
                   {filteredExperts.length} expert{filteredExperts.length !== 1 ? 's' : ''} found
-                  {useSemanticSearch && searchQuery && (
-                    <span className="ml-2 text-primary">
-                      (AI-powered search for "{searchQuery}")
-                    </span>
-                  )}
                 </div>
 
                 {filteredExperts.length > 0 ? (
@@ -334,8 +322,8 @@ export default function ExpertDiscoveryPage() {
                       <h3 className="text-lg font-semibold mb-2">No experts found</h3>
                       <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
                         {hasActiveFilters
-                          ? 'No experts match your current filters. Try adjusting your search criteria.'
-                          : 'No expert accounts have been registered yet. Expert users will appear here once they sign up.'}
+                          ? 'No experts match your current filters.'
+                          : 'No expert accounts have been registered yet.'}
                       </p>
                       {hasActiveFilters && (
                         <Button variant="outline" onClick={clearFilters}>

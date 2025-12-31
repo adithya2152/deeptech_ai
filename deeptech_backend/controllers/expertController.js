@@ -33,10 +33,37 @@ export const semanticSearch = async (req, res) => {
     // Call Python semantic search microservice
     const searchResults = await callSemanticSearchService(query, limit);
 
+    // Transform camelCase from Python service to match frontend expectations
+    const transformedResults = searchResults.results.map(expert => ({
+      id: expert.id,
+      name: expert.name,
+      email: expert.email,
+      bio: expert.bio,
+      experienceSummary: expert.bio,
+      domains: expert.domains || [],
+      skills: expert.skills || [],
+      hourlyRates: expert.hourly_rates ? {
+        advisory: expert.hourly_rates.advisory,
+        architectureReview: expert.hourly_rates.architecture_review,
+        handsOnExecution: expert.hourly_rates.hands_on_execution
+      } : {
+        advisory: null,
+        architectureReview: null,
+        handsOnExecution: null
+      },
+      vettingStatus: expert.vetting_status,
+      vettingLevel: expert.vetting_status, // Map vetting_status to vetting_level for frontend compatibility
+      rating: expert.rating,
+      reviewCount: expert.review_count,
+      totalHours: expert.total_hours,
+      availability: expert.availability,
+      similarityScore: expert.similarity_score
+    }));
+
     res.status(200).json({
-      results: searchResults.results,
+      results: transformedResults,
       query: query,
-      total: searchResults.results.length
+      total: transformedResults.length
     });
 
   } catch (error) {
@@ -53,7 +80,9 @@ export const getExpertById = async (req, res) => {
     const { id } = req.params;
     const expert = await expertModel.getExpertById(id);
 
-    if (!expert) return res.status(404).json({ error: 'Expert not found' });
+    if (!expert) {
+      return res.status(404).json({ error: 'Expert not found' });
+    }
 
     res.status(200).json({ data: expert });
   } catch (error) {

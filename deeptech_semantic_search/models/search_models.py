@@ -2,7 +2,7 @@
 Pydantic models for semantic search API
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from enum import Enum
 
@@ -30,8 +30,11 @@ class SearchRequest(BaseModel):
 class HourlyRates(BaseModel):
     """Expert hourly rates"""
     advisory: Optional[float] = None
-    architecture_review: Optional[float] = None
-    hands_on_execution: Optional[float] = None
+    architecture_review: Optional[float] = Field(default=None, alias="architectureReview")
+    hands_on_execution: Optional[float] = Field(default=None, alias="handsOnExecution")
+
+    class Config:
+        allow_population_by_field_name = True
 
 class ExpertResult(BaseModel):
     """Expert result from semantic search"""
@@ -40,17 +43,23 @@ class ExpertResult(BaseModel):
     bio: str
     domains: List[str]
     skills: List[str]
-    hourly_rates: HourlyRates
-    vetting_status: VettingStatus
+    hourly_rates: HourlyRates = Field(alias="hourlyRates")
+    vetting_status: VettingStatus = Field(alias="vettingStatus")
     rating: Optional[float] = None
-    review_count: Optional[int] = None
-    total_hours: Optional[int] = None
+    review_count: Optional[int] = Field(default=None, alias="reviewCount")
+    total_hours: Optional[int] = Field(default=None, alias="totalHours")
     availability: Optional[bool] = None
-    similarity_score: float
+    similarity_score: float = Field(alias="similarityScore")
+
+    class Config:
+        allow_population_by_field_name = True
 
 class SearchResponse(BaseModel):
     """Response model for semantic search"""
     query: str
     results: List[ExpertResult]
-    total_results: int
-    execution_time_ms: Optional[float] = None
+    total_results: int = Field(alias="totalResults")
+    execution_time_ms: Optional[float] = Field(default=None, alias="executionTimeMs")
+
+    class Config:
+        allow_population_by_field_name = True
