@@ -1,0 +1,84 @@
+[
+  {
+    "expert_id": "91fdd410-f3f0-409b-b1b9-ee416a225828",
+    "expert_name": "Nachiket Doddamani",
+    "timestamp": "2026-01-06T16:12:31.990367",
+    "overall_score": 75.45,
+    "rank_tier": "Verified Specialist",
+    "tier_emoji": "\u2705",
+    "score_breakdown": {
+      "expertise": 51.5,
+      "performance": 88.75,
+      "reliability": 100,
+      "quality": 88.0,
+      "engagement": 0.0,
+      "resume": 49.0
+    },
+    "resume_analysis": {
+      "method": "Sentence Transformers",
+      "model": "all-MiniLM-L6-v2",
+      "skills_found": 1,
+      "top_skills": [
+        "TensorFlow (0.52)"
+      ],
+      "education": "Master",
+      "certifications": 2,
+      "years_experience": null,
+      "verification_rate": "16.7%"
+    }
+  },
+  {
+    "expert_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "expert_name": "Sarah Chen",
+    "timestamp": "2026-01-06T16:12:35.575188",
+    "overall_score": 76.75,
+    "rank_tier": "Verified Specialist",
+    "tier_emoji": "\u2705",
+    "score_breakdown": {
+      "expertise": 55.5,
+      "performance": 90.46,
+      "reliability": 100,
+      "quality": 96.8,
+      "engagement": 0.0,
+      "resume": 30.0
+    },
+    "resume_analysis": {
+      "method": "Sentence Transformers",
+      "model": "all-MiniLM-L6-v2",
+      "skills_found": 0,
+      "top_skills": [],
+      "education": "Master",
+      "certifications": 0,
+      "years_experience": null,
+      "verification_rate": "0.0%"
+    }
+  },
+  {
+    "expert_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "expert_name": "Raj Patel",
+    "timestamp": "2026-01-06T16:12:39.015352",
+    "overall_score": 69.89,
+    "rank_tier": "Established Professional",
+    "tier_emoji": "\ud83c\udf93",
+    "score_breakdown": {
+      "expertise": 31.0,
+      "performance": 87.42,
+      "reliability": 100,
+      "quality": 87.2,
+      "engagement": 0.0,
+      "resume": 44.0
+    },
+    "resume_analysis": {
+      "method": "Sentence Transformers",
+      "model": "all-MiniLM-L6-v2",
+      "skills_found": 1,
+      "top_skills": [
+        "Quantum Computing (0.58)"
+      ],
+      "education": "PhD",
+      "certifications": 0,
+      "years_experience": null,
+      "verification_rate": "0.0%"
+    }
+  }
+]
