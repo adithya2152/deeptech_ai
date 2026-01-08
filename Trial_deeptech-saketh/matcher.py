@@ -4,14 +4,40 @@ from sentence_transformers import SentenceTransformer, util
 import re
 
 class SemanticMatcher:
-    # A base list of skills to check against if the resume implies them
-    DEFAULT_SKILL_DB = [
-        'Python', 'Java', 'JavaScript', 'TypeScript', 'C++', 'Go', 'Rust', 'SQL',
-        'PyTorch', 'TensorFlow', 'Keras', 'Scikit-learn', 'NLP', 'Computer Vision',
-        'React', 'Vue', 'Angular', 'FastAPI', 'Django', 'Flask', 'Node.js',
-        'AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'Terraform', 'Linux',
-        'Redis', 'PostgreSQL', 'MongoDB', 'Elasticsearch', 'Kafka', 'Spark',
-        'CI/CD', 'Git', 'Agile', 'System Design', 'Microservices'
+    # Comprehensive skill database
+    SKILL_DATABASE = [
+        # Programming Languages
+        'Python', 'Java', 'JavaScript', 'TypeScript', 'C++', 'C#', 'Go', 'Rust', 
+        'Scala', 'Kotlin', 'Swift', 'R', 'MATLAB', 'Julia', 'PHP', 'Ruby',
+        
+        # ML/AI Frameworks
+        'PyTorch', 'TensorFlow', 'Keras', 'scikit-learn', 'JAX', 'MXNet', 
+        'Caffe', 'XGBoost', 'LightGBM', 'CatBoost', 'Hugging Face Transformers',
+        
+        # Web Frameworks
+        'React', 'Vue.js', 'Angular', 'Svelte', 'Next.js', 'Nuxt', 'Django', 
+        'Flask', 'FastAPI', 'Express.js', 'Spring Boot', 'ASP.NET',
+        
+        # Cloud Platforms
+        'AWS', 'Amazon Web Services', 'Azure', 'Google Cloud Platform', 'GCP', 
+        'Heroku', 'DigitalOcean', 'Vercel', 'Netlify', 'Cloudflare',
+        
+        # Databases
+        'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Elasticsearch', 
+        'Cassandra', 'DynamoDB', 'Neo4j', 'SQLite', 'Oracle Database',
+        
+        # DevOps/Tools
+        'Docker', 'Kubernetes', 'Jenkins', 'Git', 'GitHub Actions', 'GitLab CI',
+        'Terraform', 'Ansible', 'Grafana', 'Prometheus', 'Kafka', 'Airflow', 'Spark',
+        
+        # AI/ML Concepts
+        'Deep Learning', 'Machine Learning', 'Natural Language Processing', 
+        'Computer Vision', 'Reinforcement Learning', 'Neural Networks',
+        'Convolutional Neural Networks', 'Transformers', 'BERT', 'GPT',
+        
+        # Specialized
+        'Robotics', 'Quantum Computing', 'Blockchain', 'Embedded Systems',
+        'Real-time Systems', 'Distributed Systems', 'Microservices'
     ]
 
     def __init__(self):
@@ -20,7 +46,7 @@ class SemanticMatcher:
         print(f"🧠 Semantic Engine loading on {self.device}...")
         
         self.model = SentenceTransformer('all-MiniLM-L6-v2', device=self.device)
-        self.skill_embeddings = self.model.encode(self.DEFAULT_SKILL_DB, convert_to_tensor=True)
+        self.skill_embeddings = self.model.encode(self.SKILL_DATABASE, convert_to_tensor=True)
 
     def extract_skills_semantic(self, text, threshold=0.45):
         """
@@ -41,10 +67,10 @@ class SemanticMatcher:
         found_skills = set()
         
         for i in range(len(candidates)):
-            for j in range(len(self.DEFAULT_SKILL_DB)):
+            for j in range(len(self.SKILL_DATABASE)):
                 # If similarity > threshold, we found a match
                 if cosine_scores[i][j].item() > threshold:
-                    found_skills.add(self.DEFAULT_SKILL_DB[j])
+                    found_skills.add(self.SKILL_DATABASE[j])
                     
         return list(found_skills)
 
