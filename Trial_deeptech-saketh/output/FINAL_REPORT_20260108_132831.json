@@ -38,51 +38,39 @@
         "certifications": [],
         "certification_count": 0,
         "projects": [],
-        "paper_count": 4,
+        "paper_count": 5,
         "patent_count": 0,
         "research_titles": [
             "Attention Is All You Need",
             "Extended Neural GPU",
             "ByteNet",
-            "ConvS2S"
+            "ConvS2S",
+            "End-to-end memory networks"
         ],
-        "research_summary": "This paper introduces the Transformer, a novel sequence transduction model relying solely on attention mechanisms, which achieves state-of-the-art results in machine translation while offering increased parallelization and reduced training time compared to recurrent or convolutional neural networks.",
-        "blog_post_count": 1,
+        "research_summary": "This paper introduces the Transformer, a novel sequence transduction model based entirely on attention mechanisms, which achieves state-of-the-art results in machine translation while improving parallelization and reducing training time compared to recurrent or convolutional neural networks.",
+        "blog_post_count": 0,
         "community_answers": 0,
         "upvotes": 0,
-        "top_topics": [
-            "Azure Trusted Signing",
-            "Code Signing (Windows EXE)",
-            "GitHub Actions for CI/CD",
-            ".NET Sign Tool",
-            "Windows Edge Light App",
-            "Azure CLI"
-        ],
-        "engagement_summary": "The website offloads potential community engagement to external platforms like GitHub, as no direct interactive features such as comments or upvotes are present within the provided content."
+        "top_topics": [],
+        "engagement_summary": ""
     },
     "scores": {
-        "overall": 56.87,
-        "expertise": 33.0,
-        "performance": 53.2,
+        "overall": 53.15,
+        "expertise": 35.0,
+        "performance": 44.6,
         "reliability": 100.0,
-        "quality": 49.4,
-        "engagement": 5.0
+        "quality": 40.099999999999994,
+        "engagement": 0.0
     },
-    "rank": "Tier 2: Emerging Professional",
+    "rank": "Tier 1: Newcomer",
     "extracted_content": {
         "research": [
             "Attention Is All You Need",
             "Extended Neural GPU",
             "ByteNet",
-            "ConvS2S"
+            "ConvS2S",
+            "End-to-end memory networks"
         ],
-        "topics": [
-            "Azure Trusted Signing",
-            "Code Signing (Windows EXE)",
-            "GitHub Actions for CI/CD",
-            ".NET Sign Tool",
-            "Windows Edge Light App",
-            "Azure CLI"
-        ]
+        "topics": []
     }
 }
