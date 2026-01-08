@@ -2,7 +2,7 @@
 
 > **A Production-Grade AI System for Intelligent Candidate Profiling & Scoring**
 
-This project is an advanced Resume Parsing and Scoring engine that moves beyond simple keyword matching. It leverages **Generative AI (Gemini 1.5)** for structured data extraction and **Vector Embeddings (Sentence Transformers)** for semantic skill analysis, providing a holistic "DeepTech Score" for candidates.
+This project is an advanced Resume Parsing and Scoring engine that moves beyond simple keyword matching. It leverages **Generative AI (Gemini 2.5)** for structured data extraction and **Vector Embeddings (Sentence Transformers)** for semantic skill analysis, providing a holistic "DeepTech Score" for candidates.
 
 ---
 
