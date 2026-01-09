@@ -1,0 +1,20 @@
+# Core dependencies for DeepTech Scorer Demo
+streamlit
+google-generativeai
+pymupdf
+trafilatura
+sentence-transformers
+torch
+plotly
+requests
+numpy
+beautifulsoup4
+lxml
+
+# Advanced parsing libraries
+pyresparser
+spacy
+magic-pdf
+unstructured[pdf]
+playwright
+PyGithub
