@@ -1,25 +1,25 @@
-# ai_scorer.py
+# ai_scorer.py - Single LLM call for complete analysis
 from openai import OpenAI
 import json
 import re
+from datetime import datetime
 
 class AIScorer:
     """
-    LLM-based scoring engine using OpenRouter API (free tier).
-    Evaluates candidates holistically with natural language reasoning.
+    Single LLM call analyzer - takes aggregated JSON, returns complete evaluation.
+    NO partial parsing - everything happens in one comprehensive analysis.
     """
     
     def __init__(self, api_key):
         if not api_key:
             raise ValueError("API Key is required for AI Scorer")
         
-        # Initialize OpenRouter client (OpenAI-compatible)
+        # Initialize OpenRouter client
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
         )
-        # Use free tier model: google/gemini-2.0-flash-exp:free
-        self.model = "google/gemini-2.0-flash-exp:free"
+        self.model = "meta-llama/llama-3.2-3b-instruct:free"
     
     def _clean_json_response(self, text):
         """Extract JSON from markdown code blocks or raw text"""
@@ -37,210 +37,214 @@ class AIScorer:
                     pass
             return None
     
-    def score_candidate(self, candidate_profile, job_description="", contracts_count=0):
+    def analyze_candidate(self, aggregated_data, job_description=""):
         """
-        Score candidate using AI with detailed reasoning.
+        SINGLE LLM CALL - Complete analysis of aggregated candidate data.
         
         Args:
-            candidate_profile: Aggregated profile dict with all candidate data
-            job_description: Optional job requirements for context
-            contracts_count: Number of contracts completed (for tier calculation)
+            aggregated_data: Complete JSON from aggregator with all parsed documents
+            job_description: Optional job requirements
         
         Returns:
-            Dict with scores and reasoning
+            Complete evaluation with admin recommendations, scores, and extracted structured data
         """
         
-        # Extract real-world projects from profile
-        work_history = candidate_profile.get('work_history', [])
-        projects = candidate_profile.get('projects', [])
-        research_titles = candidate_profile.get('research_titles', [])
-        top_repos = candidate_profile.get('top_projects', [])
+        print(f"[AIScorer] Starting single comprehensive analysis...")
+        print(f"[AIScorer] Aggregated data size: {len(json.dumps(aggregated_data))} chars")
         
-        prompt = f"""You are a DeepTech hiring consultant preparing a recommendation memo for an admin/hiring manager.
+        # Prepare the complete aggregated JSON as a string
+        aggregated_json = json.dumps(aggregated_data, indent=2)
+        
+        prompt = f"""You are an expert hiring analyst. Analyze this COMPLETE candidate data package and provide a comprehensive evaluation.
 
-CANDIDATE PROFILE:
+COMPLETE AGGREGATED CANDIDATE DATA:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Name: {candidate_profile.get('name', 'Unknown')}
-Experience: {candidate_profile.get('years_experience', 0)} years
-Technical Skills: {', '.join(candidate_profile.get('skills', [])[:25])}
-Certifications: {candidate_profile.get('certification_count', 0)}
-
-WORK EXPERIENCE:
-{chr(10).join([f"  • {w.get('role', 'Role')} at {w.get('company', 'Company')} ({w.get('duration_months', 0)} months)" for w in work_history[:3]]) if work_history else "  • Information extracted from resume/portfolio"}
-
-REAL-WORLD PROJECTS:
-{chr(10).join([f"  • {p if isinstance(p, str) else p.get('name', 'Project')}" for p in projects[:5]]) if projects else "  • Check GitHub repositories below"}
-
-RESEARCH & PUBLICATIONS:
-  • Papers Published: {candidate_profile.get('paper_count', 0)}
-{chr(10).join([f"  • {title}" for title in research_titles[:3]]) if research_titles else ""}
-
-GITHUB PORTFOLIO:
-  • Repositories: {candidate_profile.get('github_repos', 0)}
-  • Primary Languages: {', '.join(candidate_profile.get('github_languages', [])[:8])}
-  • Stars Received: {candidate_profile.get('github_stars', 0)}
-  • Active Projects: {len(top_repos)}
-{chr(10).join([f"    - {repo.get('name', '')}: {repo.get('description', 'No description')[:60]}" for repo in top_repos[:3]]) if top_repos else ""}
-
-COMMUNITY ENGAGEMENT:
-  • Stack Overflow: {candidate_profile.get('answers_count', 0)} answers, {candidate_profile.get('upvotes', 0)} upvotes
-  • Technical Blogs: {candidate_profile.get('blog_post_count', 0)} posts
-
-PLATFORM HISTORY:
-  • Contracts Completed: {contracts_count}
-
-{"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nJOB REQUIREMENTS:\n" + job_description if job_description else "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nGENERAL ASSESSMENT (No specific role specified)"}
-
+{aggregated_json}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-YOUR TASK:
-Prepare a hiring recommendation memo for the admin. Analyze this candidate's profile and:
+{f"JOB REQUIREMENTS:\n{job_description}\n" if job_description else ""}
 
-1. SCORE each dimension (0-100):
-   - Expertise (25%): Technical depth, certifications, research
-   - Performance (30%): Project delivery, code quality, consistency
-   - Reliability (25%): Profile consistency, active presence
-   - Quality (15%): Code/research quality, documentation
-   - Engagement (5%): Community participation, knowledge sharing
+YOUR TASK - COMPLETE ANALYSIS IN ONE RESPONSE:
 
-2. RECOMMEND specific roles/projects based on:
-   - Their strongest technical skills
-   - Real-world project experience (work history, personal projects, GitHub)
-   - Research background (if applicable)
-   - Years of experience level
+1. PARSE & STRUCTURE the raw data:
+   - Extract name, email, phone from resume text
+   - Identify all technical skills from ALL sources (resume, portfolio, research, GitHub)
+   - Calculate total years of experience from work history dates
+   - List all certifications found
+   - Extract project names and descriptions
+   - Identify research papers and their topics
+   
+2. ANALYZE & SCORE across 5 dimensions (0-100 each):
+   - Expertise (25%): Technical skills depth, certifications, research publications
+   - Performance (30%): Project delivery, code quality indicators, consistency
+   - Reliability (25%): Profile completeness, activity consistency, GitHub commits
+   - Quality (15%): Code documentation, research quality, portfolio presentation
+   - Engagement (5%): Community contributions, blog posts, StackOverflow activity
 
-3. JUSTIFY your recommendation with:
-   - Evidence from their work history
-   - Specific projects/skills alignment
-   - Research contributions (if any)
-   - GitHub portfolio quality
+3. GENERATE ADMIN RECOMMENDATION:
+   - Decision: STRONGLY RECOMMEND | RECOMMEND | CONSIDER | DO NOT RECOMMEND
+   - Recommended Roles: Specific job titles matching their skills/experience
+   - Best Fit Projects: Types of projects they'd excel at (with evidence)
+   - Hiring Justification: 2-3 sentences with SPECIFIC evidence
+   - Key Strengths: Top 3-5 strengths with proof points
+   - Experience Highlights: Standout work/projects/research
+   - Areas for Growth: Gaps or development opportunities
+   - Hiring Priority: HIGH | MEDIUM | LOW
+   - Interview Focus: Topics to probe based on profile
 
-Be specific and data-driven. Reference actual skills, projects, and experience from their profile.
+Return ONLY valid JSON with this COMPLETE structure:
 
-Return ONLY this JSON structure (no markdown):
 {{
-    "expertise_score": <0-100>,
-    "expertise_reasoning": "<specific evidence from profile>",
-    
-    "performance_score": <0-100>,
-    "performance_reasoning": "<reference real projects/GitHub activity>",
-    
-    "reliability_score": <0-100>,
-    "reliability_reasoning": "<profile consistency check>",
-    
-    "quality_score": <0-100>,
-    "quality_reasoning": "<code/research quality assessment>",
-    
-    "engagement_score": <0-100>,
-    "engagement_reasoning": "<community involvement>",
-    
-    "overall_score": <weighted average>,
-    
-    "admin_recommendation": {{
-        "decision": "<STRONGLY RECOMMEND|RECOMMEND|CONSIDER|DO NOT RECOMMEND>",
-        "recommended_roles": [
-            "Primary Role Title (e.g., Senior Full-Stack Developer)",
-            "Alternative Role (e.g., Cloud Solutions Architect)"
-        ],
-        "best_fit_projects": [
-            "Project type based on their experience (e.g., IoT Sensor Networks - matches their Master's thesis)",
-            "Another project type (e.g., React/Node.js Web Applications - 3 months industry experience)"
-        ],
-        "justification": "<2-3 sentences with SPECIFIC evidence: 'Candidate has X years in Y technology, demonstrated by Z project. Their research in ABC shows expertise in DEF. GitHub shows active work in GHI with JKL stars.'>",
-        "key_strengths": [
-            "Specific strength with evidence (e.g., 'Strong Cloud Infrastructure skills - AWS/GCP/Azure from portfolio')",
-            "Another strength (e.g., 'Published research in WSN for IoT - demonstrates domain expertise')",
-            "Third strength (e.g., '17 GitHub repos in TypeScript/Python - active developer')"
-        ],
-        "experience_highlights": [
-            "Real work: <summarize actual work experience>",
-            "Personal projects: <mention specific notable projects>",
-            "Research: <if applicable, cite publications>"
-        ],
-        "areas_for_growth": [
-            "Specific gap (e.g., 'Limited production deployment experience')",
-            "Another area (e.g., 'No certifications in cloud platforms despite skills listed')"
-        ],
-        "hiring_priority": "<HIGH|MEDIUM|LOW>",
-        "suggested_interview_focus": [
-            "Topic to probe in interview based on profile",
-            "Another area to verify"
-        ]
+  "parsed_data": {{
+    "name": "Full name from resume",
+    "email": "email@example.com",
+    "phone": "+1234567890",
+    "years_experience": 2.5,
+    "all_skills": ["Python", "React", "AWS", "etc"],
+    "certifications": ["Cert 1", "Cert 2"],
+    "projects": [
+      {{"name": "Project Name", "description": "brief desc", "technologies": ["tech1", "tech2"]}}
+    ],
+    "work_history": [
+      {{"company": "Company", "role": "Role", "duration": "X months", "technologies": ["tech"]}}
+    ],
+    "research": {{
+      "paper_count": 1,
+      "titles": ["Paper Title"],
+      "domains": ["Machine Learning", "IoT"]
     }},
-    
-    "tier_prediction": "<Tier 1-10 based on score and contracts>"
-}}"""
+    "github_summary": {{
+      "repos": 17,
+      "stars": 5,
+      "top_languages": ["TypeScript", "Python"],
+      "notable_projects": ["proj1", "proj2"]
+    }}
+  }},
+  
+  "scores": {{
+    "expertise_score": 75,
+    "expertise_reasoning": "Detailed explanation with evidence...",
+    "performance_score": 80,
+    "performance_reasoning": "Detailed explanation with evidence...",
+    "reliability_score": 70,
+    "reliability_reasoning": "Detailed explanation with evidence...",
+    "quality_score": 65,
+    "quality_reasoning": "Detailed explanation with evidence...",
+    "engagement_score": 40,
+    "engagement_reasoning": "Detailed explanation with evidence...",
+    "overall_score": 73.5
+  }},
+  
+  "admin_recommendation": {{
+    "decision": "RECOMMEND",
+    "hiring_priority": "HIGH",
+    "recommended_roles": [
+      "Full-Stack Developer",
+      "Cloud Solutions Engineer"
+    ],
+    "best_fit_projects": [
+      "React/Node.js web applications - has 3 months experience at Hillfort Technologies",
+      "IoT sensor networks - Master's thesis on wireless sensor networks for bee colonies"
+    ],
+    "justification": "Strong full-stack foundation with ReactJS/Node.js from Hillfort Technologies internship. Master's research in IoT/wireless networks demonstrates ability to work on complex embedded systems. GitHub shows 17 repos with TypeScript/Python focus.",
+    "key_strengths": [
+      "Full-stack development: ReactJS, Node.js, TailwindCSS (proven in industry)",
+      "Cloud infrastructure: AWS, GCP, Azure (from portfolio)",
+      "IoT/Embedded systems: Master's thesis on WSN, ESP32, Arduino",
+      "Research ability: Published paper on wireless sensor networks"
+    ],
+    "experience_highlights": [
+      "3 months at Hillfort Technologies: ReactJS, Node.js, PostgreSQL, MongoDB",
+      "Master's thesis: Wireless Sensor Network for bee colony monitoring",
+      "ServiceNow Certified System Administrator",
+      "17 GitHub repositories in TypeScript/Python"
+    ],
+    "areas_for_growth": [
+      "Limited professional experience (6 months total)",
+      "No visible open-source contributions",
+      "Could expand testing/DevOps skills"
+    ],
+    "suggested_interview_focus": [
+      "Deep dive on Hillfort Technologies project - architecture decisions, challenges",
+      "Master's thesis implementation - technical details of WSN deployment",
+      "System design capabilities for scaling web applications",
+      "Experience with CI/CD and testing frameworks"
+    ]
+  }},
+  
+  "tier_prediction": "Tier 2 - Intermediate Expert",
+  "timestamp": "2026-01-09T12:00:00"
+}}
+
+CRITICAL: Provide SPECIFIC evidence for every claim. Reference actual companies, projects, technologies, and numbers from the data.
+"""
 
         try:
+            print("[AIScorer] Calling LLM for complete analysis...")
             completion = self.client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
+                messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
-                max_tokens=2000
+                max_tokens=3000  # Larger for comprehensive response
             )
             
             response_text = completion.choices[0].message.content
-            scores = self._clean_json_response(response_text)
+            result = self._clean_json_response(response_text)
             
-            if not scores:
-                print("[AIScorer] Failed to parse JSON, using fallback scores")
-                return self._fallback_scores(candidate_profile)
+            if not result:
+                print("[AIScorer] ERROR: Failed to parse LLM response")
+                return self._fallback_response()
             
-            # Validate and round scores
-            for key in ['expertise_score', 'performance_score', 'reliability_score', 'quality_score', 'engagement_score', 'overall_score']:
-                if key in scores:
-                    scores[key] = round(float(scores[key]), 2)
+            print(f"[AIScorer] SUCCESS: Complete analysis generated")
+            print(f"[AIScorer] Overall Score: {result.get('scores', {}).get('overall_score', 0)}")
+            print(f"[AIScorer] Decision: {result.get('admin_recommendation', {}).get('decision', 'UNKNOWN')}")
             
-            # Add metadata
-            scores['scoring_method'] = 'AI (OpenRouter - Gemini 2.0 Flash Free)'
-            scores['timestamp'] = datetime.now().isoformat()
-            
-            print(f"[AIScorer] Generated scores: Overall={scores.get('overall_score')}, Expertise={scores.get('expertise_score')}")
-            
-            return scores
+            return result
             
         except Exception as e:
             print(f"[AIScorer] Error: {e}")
-            return self._fallback_scores(candidate_profile)
+            return self._fallback_response()
     
-    def _fallback_scores(self, profile):
-        """Basic heuristic scoring if AI fails"""
-        from datetime import datetime
-        
-        # Simple heuristics
-        skill_score = min(len(profile.get('skills', [])) * 2, 70)
-        exp_score = min(profile.get('years_experience', 0) * 10, 50)
-        github_score = min(profile.get('github_repos', 0) * 2, 60)
-        research_score = profile.get('paper_count', 0) * 10
-        
-        expertise = min(skill_score + exp_score + research_score, 100)
-        performance = min(github_score + profile.get('github_stars', 0) * 0.5, 100)
-        reliability = 75  # Default assumption
-        quality = min(github_score + research_score, 100)
-        engagement = min(profile.get('answers_count', 0) * 5 + profile.get('blog_post_count', 0) * 10, 100)
-        
-        overall = (expertise * 0.25 + performance * 0.30 + reliability * 0.25 + quality * 0.15 + engagement * 0.05)
-        
+    def _fallback_response(self):
+        """Fallback response when LLM fails"""
         return {
-            'expertise_score': round(expertise, 2),
-            'expertise_reasoning': 'Fallback scoring due to AI error',
-            'performance_score': round(performance, 2),
-            'performance_reasoning': 'Fallback scoring due to AI error',
-            'reliability_score': round(reliability, 2),
-            'reliability_reasoning': 'Fallback scoring due to AI error',
-            'quality_score': round(quality, 2),
-            'quality_reasoning': 'Fallback scoring due to AI error',
-            'engagement_score': round(engagement, 2),
-            'engagement_reasoning': 'Fallback scoring due to AI error',
-            'overall_score': round(overall, 2),
-            'strengths': ['Data extraction successful'],
-            'weaknesses': ['AI scoring unavailable'],
-            'recommendation': 'CONSIDER - Manual review needed',
-            'tier_prediction': 'Unknown',
-            'scoring_method': 'Fallback Heuristic',
-            'timestamp': datetime.now().isoformat()
+            "parsed_data": {
+                "name": "Unknown",
+                "email": "",
+                "phone": "",
+                "years_experience": 0,
+                "all_skills": [],
+                "certifications": [],
+                "projects": [],
+                "work_history": [],
+                "research": {"paper_count": 0, "titles": [], "domains": []},
+                "github_summary": {"repos": 0, "stars": 0, "top_languages": [], "notable_projects": []}
+            },
+            "scores": {
+                "expertise_score": 50,
+                "expertise_reasoning": "LLM analysis unavailable - fallback score",
+                "performance_score": 50,
+                "performance_reasoning": "LLM analysis unavailable - fallback score",
+                "reliability_score": 50,
+                "reliability_reasoning": "LLM analysis unavailable - fallback score",
+                "quality_score": 50,
+                "quality_reasoning": "LLM analysis unavailable - fallback score",
+                "engagement_score": 50,
+                "engagement_reasoning": "LLM analysis unavailable - fallback score",
+                "overall_score": 50.0
+            },
+            "admin_recommendation": {
+                "decision": "MANUAL REVIEW REQUIRED",
+                "hiring_priority": "MEDIUM",
+                "recommended_roles": ["Review required - LLM unavailable"],
+                "best_fit_projects": ["Manual analysis needed"],
+                "justification": "AI analysis failed - please review candidate data manually",
+                "key_strengths": ["Data extracted successfully - LLM analysis pending"],
+                "experience_highlights": ["Manual review required"],
+                "areas_for_growth": ["Manual review required"],
+                "suggested_interview_focus": ["Manual review required"]
+            },
+            "tier_prediction": "Unknown - Manual Review",
+            "timestamp": datetime.now().isoformat(),
+            "error": "LLM analysis failed"
         }
-
-from datetime import datetime

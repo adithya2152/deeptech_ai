@@ -85,12 +85,12 @@ All packages successfully installed:
 
 ### Before vs After
 
-| Source | Before | After |
-|--------|--------|-------|
+| Source                     | Before                           | After                                   |
+| -------------------------- | -------------------------------- | --------------------------------------- |
 | **Portfolio** (saketh.com) | ❌ Empty skills (JS not rendered) | ✅ Full skills extraction via Playwright |
-| **Research PDF** | ❌ skills=null (poor extraction) | ✅ Comprehensive extraction via MinerU |
-| **GitHub** (saketh-22) | ❌ Empty data (API errors) | ✅ Robust extraction via PyGithub |
-| **Resume** | ⚠️ Gemini-only | ✅ pyresparser NER + Gemini validation |
+| **Research PDF**           | ❌ skills=null (poor extraction)  | ✅ Comprehensive extraction via MinerU   |
+| **GitHub** (saketh-22)     | ❌ Empty data (API errors)        | ✅ Robust extraction via PyGithub        |
+| **Resume**                 | ⚠️ Gemini-only                    | ✅ pyresparser NER + Gemini validation   |
 
 ---
 

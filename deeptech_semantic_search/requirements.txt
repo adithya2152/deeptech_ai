@@ -9,6 +9,13 @@ sentence-transformers>=2.3.0
 transformers>=4.21.0
 torch==2.2.0
 numpy<2
+spacy>=3.7.0
+
+# NLP and Document Processing
+PyPDF2>=3.0.0
+python-docx>=1.1.0
+pytesseract>=0.3.10
+Pillow>=10.0.0
 
 # Database dependencies (for PostgreSQL with pgvector)
 psycopg2-binary==2.9.9

@@ -68,19 +68,13 @@ with st.sidebar:
     cancel_rate = st.slider("Cancellation Rate", 0.0, 1.0, 0.0)
     response_hours = st.slider("Avg Response Time (hrs)", 0, 48, 2)
 
-if not api_key:
-    st.warning("Please enter Gemini API Key to start.")
-    st.stop()
-
-# Initialize Engines
+# Initialize only non-LLM components immediately
 scorer = DeepTechScorer()
 matcher = load_matcher()
 aggregator = load_aggregator()
-p_resume = ResumeParser(api_key)
-p_web = WebResumeParser(api_key)
-p_research = ResearchParser(api_key)
-p_github = GitHubParser(api_key, github_token if github_token else None)
-p_crawler = EngagementCrawler(api_key)
+
+# Parsers will be initialized when needed (no API key required for extraction)
+# AI Scorer will only be initialized when analysis is requested
 
 # Global State - Multi-Document Support
 if 'documents' not in st.session_state:
@@ -129,12 +123,35 @@ with col1:
     st.divider()
     
     # --- MAIN ANALYZE BUTTON ---
-    analyze_button = st.button("🚀 ANALYZE ALL DATA", type="primary", width="stretch")
+    col_btn1, col_btn2 = st.columns([3, 1])
+    with col_btn1:
+        analyze_button = st.button("🚀 ANALYZE ALL DATA", type="primary", width="stretch")
+    with col_btn2:
+        if st.button("🔄 Reset", width="stretch"):
+            # Clear all analysis data
+            st.session_state.documents = []
+            st.session_state.document_embeddings = []
+            st.session_state.aggregated_profile = {}
+            st.session_state.candidate_data = {}
+            st.session_state.analysis_complete = False
+            if 'ai_analysis_result' in st.session_state:
+                del st.session_state.ai_analysis_result
+            st.rerun()
     
     if analyze_button:
-        # Clear previous documents
+        # Clear previous analysis
         st.session_state.documents = []
         st.session_state.document_embeddings = []
+        st.session_state.analysis_complete = False
+        if 'ai_analysis_result' in st.session_state:
+            del st.session_state.ai_analysis_result
+        
+        # Initialize parsers (NO LLM calls - pure extraction)
+        p_resume = ResumeParser()
+        p_web = WebResumeParser()
+        p_research = ResearchParser()
+        p_github = GitHubParser(github_token if github_token else None)
+        p_crawler = EngagementCrawler()
         
         progress_bar = st.progress(0)
         status_text = st.empty()
@@ -148,25 +165,19 @@ with col1:
                 for uploaded_file in uploaded_files:
                     raw_text = p_resume.extract_text(uploaded_file.read())
                     if len(raw_text.strip()) >= 100:
-                        gemini_data = p_resume.parse(raw_text)
-                        semantic_skills = matcher.extract_skills_semantic(raw_text)
-                        combined_skills = list(set(gemini_data.get("skills", []) + semantic_skills))
-                        
+                        # Only extract text, let LLM do the parsing later
                         doc_record = {
                             "source_type": "resume",
                             "source_name": uploaded_file.name,
-                            "name": gemini_data.get("name", "Unknown"),
-                            "full_text": raw_text,
-                            "years_experience": gemini_data.get("years_experience", 0),
-                            "skills": combined_skills,
-                            "skill_count": len(combined_skills),
-                            "certifications": gemini_data.get("certifications", []),
-                            "certification_count": gemini_data.get("certification_count", 0)
+                            "raw_text": raw_text,
+                            "char_count": len(raw_text),
+                            "extraction_method": "pymupdf"
                         }
                         
                         embedding = matcher.encode_document(raw_text)
                         st.session_state.documents.append(doc_record)
                         st.session_state.document_embeddings.append(embedding)
+                        st.info(f"✅ Resume: Extracted {len(raw_text)} chars from {uploaded_file.name}")
             except Exception as e:
                 st.error(f"❌ Resume processing error: {str(e)}")
         current_step += 1
@@ -174,51 +185,43 @@ with col1:
         
         # --- PROCESS PORTFOLIO ---
         if portfolio_url:
-            status_text.text("🌐 Analyzing portfolio...")
+            status_text.text("🌐 Extracting portfolio...")
             try:
-                gemini_data = p_web.parse(portfolio_url)
-                if "error" not in gemini_data:
+                parsed_data = p_web.parse(portfolio_url)  # Pure extraction, no LLM
+                if "error" not in parsed_data:
                     doc_record = {
                         "source_type": "portfolio",
-                        "source_name": portfolio_url,
-                        "name": gemini_data.get("name", "Unknown"),
-                        "full_text": gemini_data.get("full_text", ""),
-                        "years_experience": gemini_data.get("years_experience", 0),
-                        "skills": gemini_data.get("skills", []),
-                        "skill_count": len(gemini_data.get("skills", [])),
-                        "certifications": gemini_data.get("certifications", []),
-                        "certification_count": gemini_data.get("certification_count", 0)
+                        "source_url": portfolio_url,
+                        "raw_text": parsed_data.get("raw_text", ""),
+                        "char_count": parsed_data.get("char_count", 0),
+                        "extraction_method": "trafilatura"
                     }
-                    embedding = matcher.encode_document(gemini_data.get("full_text", ""))
+                    embedding = matcher.encode_document(parsed_data.get("raw_text", ""))
                     st.session_state.documents.append(doc_record)
                     st.session_state.document_embeddings.append(embedding)
             except Exception as e:
-                st.warning(f"⚠️ Portfolio analysis failed: {str(e)}")
+                st.warning(f"⚠️ Portfolio extraction failed: {str(e)}")
         current_step += 1
         progress_bar.progress(current_step / total_steps)
         
         # --- PROCESS RESEARCH ---
         if research_text:
-            status_text.text("🔬 Extracting research data...")
+            status_text.text("🔬 Extracting research PDF...")
             try:
-                data = p_research.parse(research_text)
-                doc_record = {
-                    "source_type": "research",
-                    "source_name": "Research Publications",
-                    "full_text": data.get("full_text", research_text),
-                    "paper_count": data.get("paper_count", 0),
-                    "patent_count": data.get("patent_count", 0),
-                    "research_titles": data.get("titles", []),
-                    "research_summary": data.get("summary", ""),
-                    "skills": data.get("skills", []) + data.get("technologies", []),  # Include research skills
-                    "research_domains": data.get("research_domains", []),
-                    "authors": data.get("authors", [])
-                }
-                embedding = matcher.encode_document(data.get("full_text", research_text))
-                st.session_state.documents.append(doc_record)
-                st.session_state.document_embeddings.append(embedding)
+                parsed_data = p_research.parse(research_text)  # Pure extraction, no LLM
+                if "error" not in parsed_data:
+                    doc_record = {
+                        "source_type": "research",
+                        "raw_text": parsed_data.get("raw_text", ""),
+                        "title": parsed_data.get("title", "Unknown"),
+                        "char_count": parsed_data.get("char_count", 0),
+                        "extraction_method": "pymupdf"
+                    }
+                    embedding = matcher.encode_document(parsed_data.get("raw_text", ""))
+                    st.session_state.documents.append(doc_record)
+                    st.session_state.document_embeddings.append(embedding)
             except Exception as e:
-                st.warning(f"⚠️ Research analysis failed: {str(e)}")
+                st.warning(f"⚠️ Research PDF extraction failed: {str(e)}")
         current_step += 1
         progress_bar.progress(current_step / total_steps)
         
@@ -228,28 +231,28 @@ with col1:
             try:
                 data = p_github.parse(github_input)
                 if "error" not in data:
+                    # Pure extraction - GitHub API data without LLM
                     doc_record = {
-                        "source_type": "github",
-                        "source_name": data.get("profile_url", github_input),
-                        "full_text": data.get("github_summary", "") + " " + data.get("github_bio", ""),
-                        "skills": data.get("skills", data.get("github_languages", [])),
-                        "github_repos": data.get("github_repos", 0),
-                        "github_stars": data.get("github_stars", 0),
-                        "github_forks": data.get("github_forks", 0),
-                        "github_commits": data.get("github_commits", 0),
-                        "github_followers": data.get("github_followers", 0),
-                        "github_languages": data.get("github_languages", []),
-                        "top_projects": data.get("top_projects", []),
-                        "top_topics": data.get("top_topics", data.get("github_languages", [])),
-                        "account_age_years": data.get("account_age_years", 0)
+                        "source_type": data.get("source_type", "github"),
+                        "source_name": github_input,
+                        "username": data.get("username", ""),
+                        "name": data.get("name", ""),
+                        "bio": data.get("bio", ""),
+                        "repos_count": data.get("repos_count", 0),
+                        "total_stars": data.get("total_stars", 0),
+                        "languages": data.get("languages", {}),
+                        "top_repos": data.get("top_repos", []),
+                        "created_at": data.get("created_at", ""),
+                        "raw_text": f"{data.get('name', '')} {data.get('bio', '')} {', '.join(data.get('languages', {}).keys())}"
                     }
-                    embedding = matcher.encode_document(doc_record["full_text"])
+                    embedding = matcher.encode_document(doc_record["raw_text"])
                     st.session_state.documents.append(doc_record)
                     st.session_state.document_embeddings.append(embedding)
+                    st.info(f"✅ GitHub: Found {data.get('repos_count', 0)} repos, {data.get('total_stars', 0)} stars, {len(data.get('languages', {}))} languages")
                 else:
                     st.warning(f"⚠️ GitHub: {data.get('error', 'Unknown error')}")
             except Exception as e:
-                st.warning(f"⚠️ GitHub analysis failed: {str(e)}")
+                st.warning(f"⚠️ GitHub extraction failed: {str(e)}")
         current_step += 1
         progress_bar.progress(1.0)
         
@@ -282,6 +285,9 @@ with col1:
             progress_bar.empty()
             status_text.empty()
             st.error("❌ No data provided. Please fill at least one section above.")
+        
+        # Mark that analysis is complete
+        st.session_state.analysis_complete = True
 
 with col2:
     st.subheader("2. DeepTech Scoring")
@@ -343,141 +349,162 @@ with col2:
         
         if not api_key:
             st.warning("⚠️ API Key required for AI scoring")
+        elif not st.session_state.documents:
+            st.warning("⚠️ No data collected. AI scoring requires at least one data source.")
+        elif not st.session_state.get('analysis_complete', False):
+            st.info("👆 Click 'ANALYZE ALL DATA' button above to start processing")
         else:
-            with st.spinner("🤖 AI analyzing candidate..."):
-                try:
-                    ai_scorer = AIScorer(api_key)
-                    ai_scores = ai_scorer.score_candidate(
-                        candidate_profile=cd,
-                        job_description=job_desc,
-                        contracts_count=contracts_completed
-                    )
-                    
-                    # Admin Recommendation Section (NEW FORMAT)
-                    admin_rec = ai_scores.get('admin_recommendation', {})
-                    
-                    # Overall Score
-                    st.metric("AI Overall Score", f"{ai_scores['overall_score']:.1f}/100")
-                    
-                    # ADMIN RECOMMENDATION - Primary Display
-                    if admin_rec:
-                        decision = admin_rec.get('decision', 'CONSIDER')
-                        priority = admin_rec.get('hiring_priority', 'MEDIUM')
-                        
-                        # Decision Badge with color coding
-                        if 'STRONGLY' in decision:
-                            st.success(f"✅ **DECISION:** {decision} | **PRIORITY:** {priority}")
-                        elif decision == 'RECOMMEND':
-                            st.info(f"👍 **DECISION:** {decision} | **PRIORITY:** {priority}")
-                        elif decision == 'CONSIDER':
-                            st.warning(f"🤔 **DECISION:** {decision} | **PRIORITY:** {priority}")
-                        else:
-                            st.error(f"❌ **DECISION:** {decision} | **PRIORITY:** {priority}")
-                        
-                        # Recommended Roles & Projects
-                        col_role, col_proj = st.columns(2)
-                        with col_role:
-                            st.markdown("**🎯 Recommended Roles:**")
-                            for role in admin_rec.get('recommended_roles', []):
-                                st.markdown(f"- {role}")
-                        with col_proj:
-                            st.markdown("**💼 Best Fit Projects:**")
-                            for project in admin_rec.get('best_fit_projects', []):
-                                st.markdown(f"- {project}")
-                        
-                        # Justification
-                        st.markdown("**📋 Hiring Justification:**")
-                        st.write(admin_rec.get('justification', ''))
-                        
-                        # Key Highlights
-                        col_exp, col_growth = st.columns(2)
-                        with col_exp:
-                            st.markdown("**🌟 Experience Highlights:**")
-                            for highlight in admin_rec.get('experience_highlights', []):
-                                st.markdown(f"- {highlight}")
-                        with col_growth:
-                            st.markdown("**📈 Areas for Growth:**")
-                            for area in admin_rec.get('areas_for_growth', []):
-                                st.markdown(f"- {area}")
-                        
-                        # Interview Focus
-                        st.markdown("**❓ Suggested Interview Focus:**")
-                        for topic in admin_rec.get('suggested_interview_focus', []):
-                            st.markdown(f"- {topic}")
-                        
-                        st.divider()
-                    else:
-                        # Fallback to old format if no admin_recommendation
-                        st.info(f"**Recommendation:** {ai_scores['recommendation']}")
-                        st.caption(f"Predicted Tier: {ai_scores.get('tier_prediction', 'Unknown')}")
-                    
-                    # Dimension Scores with Reasoning
-                    st.markdown("#### 📊 Detailed Breakdown")
-                    
-                    dimensions = [
-                        ("Expertise", ai_scores['expertise_score'], ai_scores['expertise_reasoning'], "25%"),
-                        ("Performance", ai_scores['performance_score'], ai_scores['performance_reasoning'], "30%"),
-                        ("Reliability", ai_scores['reliability_score'], ai_scores['reliability_reasoning'], "25%"),
-                        ("Quality", ai_scores['quality_score'], ai_scores['quality_reasoning'], "15%"),
-                        ("Engagement", ai_scores['engagement_score'], ai_scores['engagement_reasoning'], "5%")
-                    ]
-                    
-                    for dim_name, score, reasoning, weight in dimensions:
-                        with st.expander(f"**{dim_name}** ({weight}): {score:.0f}/100"):
-                            st.write(reasoning)
-                    
-                    # Radar Chart
-                    fig = go.Figure(data=go.Scatterpolar(
-                        r=[ai_scores['expertise_score'], ai_scores['performance_score'], 
-                           ai_scores['reliability_score'], ai_scores['quality_score'], ai_scores['engagement_score']],
-                        theta=['Expertise (25%)', 'Performance (30%)', 'Reliability (25%)', 'Quality (15%)', 'Engagement (5%)'],
-                        fill='toself',
-                        name='AI Scores'
-                    ))
-                    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=False, height=400)
-                    st.plotly_chart(fig, width="stretch")
-                    
-                    # Key Strengths from Admin Recommendation
-                    if admin_rec and admin_rec.get('key_strengths'):
-                        st.markdown("**💪 Key Strengths (Evidence-Based):**")
-                        for strength in admin_rec['key_strengths']:
-                            st.markdown(f"- {strength}")
-                    else:
-                        # Fallback to old strengths/weaknesses
-                        col_sw1, col_sw2 = st.columns(2)
-                        with col_sw1:
-                            st.markdown("**✅ Strengths:**")
-                            for strength in ai_scores.get('strengths', []):
-                                st.markdown(f"- {strength}")
-                        with col_sw2:
-                            st.markdown("**⚠️ Areas to Improve:**")
-                            for weakness in ai_scores.get('weaknesses', []):
-                                st.markdown(f"- {weakness}")
-                    
-                    # Save Report
-                    if st.button("💾 Save AI Report"):
-                        report = {
-                            "profile": cd,
-                            "ai_scores": ai_scores,
-                            "documents": [
-                                {
-                                    "source_type": doc.get("source_type"),
-                                    "source_name": doc.get("source_name"),
-                                    "key_metrics": {
-                                        "skills": doc.get("skills", [])[:10],
-                                        "years_experience": doc.get("years_experience", 0)
-                                    }
-                                } for doc in st.session_state.documents
-                            ],
-                            "scoring_method": "AI (Gemini 2.0 Flash)",
-                            "timestamp": ai_scores['timestamp']
+            # Check if AI scoring already done to prevent re-runs
+            if 'ai_analysis_result' not in st.session_state:
+                with st.spinner("🤖 AI analyzing complete candidate profile..."):
+                    try:
+                        # Prepare aggregated data package for single LLM call
+                        aggregated_data = {
+                            "documents": st.session_state.documents,
+                            "metadata": {
+                                "total_documents": len(st.session_state.documents),
+                                "sources_used": [doc.get("source_type", "unknown") for doc in st.session_state.documents],
+                                "contracts_completed": contracts_completed
+                            }
                         }
-                        path = save_json(report, "AI_REPORT")
-                        st.success(f"Saved to {path}")
+                        
+                        # Single comprehensive LLM call
+                        ai_scorer = AIScorer(api_key)
+                        analysis_result = ai_scorer.analyze_candidate(
+                            aggregated_data=aggregated_data,
+                            job_description=job_desc
+                        )
+                        
+                        # Store in session state to prevent re-runs
+                        st.session_state.ai_analysis_result = analysis_result
+                        
+                    except Exception as e:
+                        st.error(f"❌ AI Scoring Error: {str(e)}")
+                        st.info("💡 Try switching to Rule-Based scoring or check your API key")
+                        st.session_state.ai_analysis_result = None
+            
+            # Display results (from session state)
+            if st.session_state.get('ai_analysis_result'):
+                analysis_result = st.session_state.ai_analysis_result
                 
-                except Exception as e:
-                    st.error(f"❌ AI Scoring Error: {str(e)}")
-                    st.info("💡 Try switching to Rule-Based scoring or check your API key")
+                # Display parsed data section
+                st.markdown("#### 📝 Extracted Profile Data")
+                parsed_data = analysis_result.get('parsed_data', {})
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if parsed_data.get('name'):
+                        st.metric("Name", parsed_data['name'])
+                    if parsed_data.get('email'):
+                        st.metric("Email", parsed_data['email'])
+                with col2:
+                    if parsed_data.get('phone'):
+                        st.metric("Phone", parsed_data['phone'])
+                    if parsed_data.get('years_experience'):
+                        st.metric("Experience", f"{parsed_data['years_experience']} years")
+                with col3:
+                    if parsed_data.get('all_skills'):
+                        st.metric("Total Skills", len(parsed_data['all_skills']))
+                
+                st.divider()
+                
+                # Admin Recommendation Section (PRIMARY DISPLAY)
+                admin_rec = analysis_result.get('admin_recommendation', {})
+                scores = analysis_result.get('scores', {})
+                
+                # Overall Score
+                st.metric("AI Overall Score", f"{scores.get('overall_score', 0):.1f}/100")
+                
+                if admin_rec:
+                    decision = admin_rec.get('decision', 'CONSIDER')
+                    priority = admin_rec.get('hiring_priority', 'MEDIUM')
+                    
+                    # Decision Badge with color coding
+                    if 'STRONGLY' in decision:
+                        st.success(f"✅ **DECISION:** {decision} | **PRIORITY:** {priority}")
+                    elif decision == 'RECOMMEND':
+                        st.info(f"👍 **DECISION:** {decision} | **PRIORITY:** {priority}")
+                    elif decision == 'CONSIDER':
+                        st.warning(f"🤔 **DECISION:** {decision} | **PRIORITY:** {priority}")
+                    else:
+                        st.error(f"❌ **DECISION:** {decision} | **PRIORITY:** {priority}")
+                    
+                    # Recommended Roles & Projects
+                    col_role, col_proj = st.columns(2)
+                    with col_role:
+                        st.markdown("**🎯 Recommended Roles:**")
+                        for role in admin_rec.get('recommended_roles', []):
+                            st.markdown(f"- {role}")
+                    with col_proj:
+                        st.markdown("**💼 Best Fit Projects:**")
+                        for project in admin_rec.get('best_fit_projects', []):
+                            st.markdown(f"- {project}")
+                    
+                    # Justification
+                    st.markdown("**📋 Hiring Justification:**")
+                    st.write(admin_rec.get('justification', ''))
+                    
+                    # Key Highlights
+                    col_exp, col_growth = st.columns(2)
+                    with col_exp:
+                        st.markdown("**🌟 Key Strengths:**")
+                        for strength in admin_rec.get('key_strengths', []):
+                            st.markdown(f"- {strength}")
+                        st.markdown("**💡 Experience Highlights:**")
+                        for highlight in admin_rec.get('experience_highlights', []):
+                            st.markdown(f"- {highlight}")
+                    with col_growth:
+                        st.markdown("**📈 Areas for Growth:**")
+                        for area in admin_rec.get('areas_for_growth', []):
+                            st.markdown(f"- {area}")
+                    
+                    # Interview Focus
+                    st.markdown("**❓ Suggested Interview Focus:**")
+                    for topic in admin_rec.get('suggested_interview_focus', []):
+                        st.markdown(f"- {topic}")
+                    
+                    st.divider()
+                
+                # Dimension Scores with Reasoning
+                st.markdown("#### 📊 Detailed Breakdown")
+                
+                dimensions = [
+                    ("Expertise", scores.get('expertise_score', 0), scores.get('expertise_reasoning', ''), "25%"),
+                    ("Performance", scores.get('performance_score', 0), scores.get('performance_reasoning', ''), "30%"),
+                    ("Reliability", scores.get('reliability_score', 0), scores.get('reliability_reasoning', ''), "25%"),
+                    ("Quality", scores.get('quality_score', 0), scores.get('quality_reasoning', ''), "15%"),
+                    ("Engagement", scores.get('engagement_score', 0), scores.get('engagement_reasoning', ''), "5%")
+                ]
+                
+                for dim_name, score, reasoning, weight in dimensions:
+                    with st.expander(f"**{dim_name}** ({weight}): {score:.0f}/100"):
+                        st.write(reasoning if reasoning else "No reasoning provided")
+                
+                # Radar Chart
+                fig = go.Figure(data=go.Scatterpolar(
+                    r=[scores.get('expertise_score', 0), scores.get('performance_score', 0), 
+                       scores.get('reliability_score', 0), scores.get('quality_score', 0), 
+                       scores.get('engagement_score', 0)],
+                    theta=['Expertise (25%)', 'Performance (30%)', 'Reliability (25%)', 'Quality (15%)', 'Engagement (5%)'],
+                    fill='toself',
+                    name='AI Scores'
+                ))
+                fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=False, height=400)
+                st.plotly_chart(fig, width="stretch")
+                
+                # Save Report
+                if st.button("💾 Save AI Report"):
+                    report = {
+                        "parsed_data": parsed_data,
+                        "scores": scores,
+                        "admin_recommendation": admin_rec,
+                        "tier_prediction": analysis_result.get('tier_prediction', 'Unknown'),
+                        "documents_analyzed": len(st.session_state.documents),
+                        "sources": [doc.get("source_type") for doc in st.session_state.documents],
+                        "scoring_method": "AI (Single Comprehensive Analysis)",
+                        "timestamp": analysis_result.get('timestamp', '')
+                    }
+                    path = save_json(report, "AI_COMPREHENSIVE_REPORT")
+                    st.success(f"Saved to {path}")
     
     else:
         # ===== RULE-BASED SCORING =====
