@@ -1,9 +1,13 @@
 # parsers.py - Pure extraction without LLM (optimized for single LLM call)
 import fitz  # PyMuPDF
 import trafilatura
+from trafilatura.settings import Extractor
+import docx2txt
 import json
 import re
 import requests
+
+extract_options = Extractor(output_format="txt", with_metadata=False, comments=False, tables=True, links=False, dedup=True)
 
 class ResumeParser:
     """Extract text and basic info from resume PDFs - NO LLM"""
@@ -97,11 +101,7 @@ class WebResumeParser:
             # Extract with aggressive settings
             text = trafilatura.extract(
                 downloaded,
-                include_comments=False,
-                include_tables=True,
-                include_links=True,
-                no_fallback=False,
-                favor_precision=False,
+                options=extract_options,
                 favor_recall=True
             )
             
